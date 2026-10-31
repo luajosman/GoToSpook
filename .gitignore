@@ -147,3 +147,14 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# ACV Router
+# local data: raw lists, provider cache, scored results (never commit, the repo is public)
+data/
+# next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+.DS_Store
