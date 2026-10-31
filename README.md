@@ -21,7 +21,6 @@ Then open <http://localhost:3000>. The header has Overview, Pipeline, Leads and 
 | `/leads/[id]` | One company: estimate, calculation, evidence with sources, motion and next step |
 | `/p/[slug]` | The company's personal page in German, with "Angebot per Fax senden" |
 | `/pricing` | Pricing simulator: change the three prices or add a starter plan and see who moves, on the loaded run |
-| `/inbound` | Live inbound scoring, empty until a source is connected; not linked in the navigation |
 | `/customers` | Customers who are growing, shown as an empty state until a customer list exists |
 | `/how-it-works` | The three motions, routing rules, data sources and contact rules |
 
