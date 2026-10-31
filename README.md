@@ -23,7 +23,7 @@ Then open <http://localhost:3000>.
 | `/inbound` | Live inbound scoring, shown as an empty feed until a form or Meta lead source is connected |
 | `/customers` | Customers who are growing, shown as an empty state until a customer list exists |
 
-Without a results file the app shows the committed sample (twelve fictional companies from the design mockup, marked "Sample data"). A real run goes to `data/results/scored.json`, which is git-ignored and picked up automatically.
+Without a results file the app shows the committed sample (twelve fictional companies from the design mockup, marked "Sample data"). A real run goes to `data/results/scored.json`, which is git-ignored and picked up automatically. The file's contract for whoever writes the pipeline is in `docs/results-format.md`.
 
 ## Scripts
 
@@ -34,6 +34,7 @@ Without a results file the app shows the committed sample (twelve fictional comp
 | `npm run check` | Unit checks for the formula, threshold, motion rules, sample data and fax flow |
 | `npm run typecheck` | Route types plus `tsc --noEmit` |
 | `npm run pipeline` | Source, enrich and score all companies into `data/` (not built yet) |
+| `npm run validate -- <file>` | Check a results file against the schema the app reads (`npx tsx scripts/validate-results.ts --example` prints one) |
 
 ## How scoring works
 
