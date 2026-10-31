@@ -104,3 +104,33 @@ export function toScoreInput(m: MergedCompany): ScoreInput {
   };
   return { company, technicians, officeSeats };
 }
+
+/**
+ * Folds enrichment-only records into companies that already exist: by normalized name when exactly one
+ * company has it, or by website domain. Never adds companies. Returns how many were enriched.
+ */
+export function enrichMerged(merged: MergedCompany[], extra: readonly SourceRecord[]): number {
+  const byName = new Map<string, MergedCompany[]>();
+  const byDomain = new Map<string, MergedCompany>();
+  const domainOf = (url?: string) => url?.replace(/^https?:\/\/(www\.)?/, "").replace(/\/.*$/, "").toLowerCase();
+  for (const m of merged) {
+    const key = normalizeName(m.name);
+    byName.set(key, [...(byName.get(key) ?? []), m]);
+    const d = domainOf(m.website);
+    if (d) byDomain.set(d, m);
+  }
+  let enriched = 0;
+  for (const r of extra) {
+    const named = byName.get(normalizeName(r.name));
+    const target = (named?.length === 1 ? named[0] : undefined) ?? (domainOf(r.website) ? byDomain.get(domainOf(r.website)!) : undefined);
+    if (!target) continue;
+    if (!target.sources.includes(r.source)) target.sources.push(r.source);
+    target.website ??= r.website;
+    target.linkedinUrl ??= r.linkedinUrl;
+    target.lushaId ??= r.lushaId;
+    if (r.staff && (!target.staff || (r.staff.exact && !target.staff.exact))) target.staff = r.staff;
+    target.evidence.push(...r.evidence);
+    enriched += 1;
+  }
+  return enriched;
+}

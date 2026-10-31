@@ -8,7 +8,7 @@ import { entriesToRecords, parseResults, scrapeBrandenburgShk } from "../lib/sou
 import { csvObjects, parseCsv } from "../lib/sources/csv";
 import { guildRowsToRecords } from "../lib/sources/innung-folder";
 import { needleRowsToRecords } from "../lib/sources/needle-csv";
-import { fallbackStaff, mergeRecords, toScoreInput, type SourceRecord } from "../lib/sources/record";
+import { enrichMerged, fallbackStaff, mergeRecords, toScoreInput, type SourceRecord } from "../lib/sources/record";
 import { inNiche } from "../lib/sources/regions";
 
 const roots: string[] = [];
@@ -58,6 +58,12 @@ describe("Needle CSV", () => {
     assert.equal(r.lushaId, "L-1");
     assert.doesNotMatch(JSON.stringify(r), /Erika|Muster/);
     assert.equal(needleRowsToRecords(NEEDLE, { fetchedAt: T, allRegions: true }).records.length, 2);
+  });
+
+  it("keeps rows outside the niche for enrichment only", () => {
+    const { enrichOnly } = needleRowsToRecords(NEEDLE, { fetchedAt: T });
+    assert.equal(enrichOnly.length, 1);
+    assert.equal(enrichOnly[0].name, "Süd Klima AG");
   });
 });
 
@@ -126,6 +132,18 @@ describe("merge and fallback", () => {
     assert.equal(merged[0].address.street, "Musterweg 5");
     assert.equal(merged[0].staff?.value, 21);
     assert.equal(merged[0].website, "https://alpha.example");
+  });
+
+  it("enriches existing companies from extra rows but never adds new ones", () => {
+    const merged = mergeRecords([guild]);
+    const extra: SourceRecord[] = [
+      { ...needle, address: { city: "Werder" } },
+      { source: "needle", name: "Somebody Else GmbH", address: {}, evidence: [] },
+    ];
+    assert.equal(enrichMerged(merged, extra), 1);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].staff?.value, 21);
+    assert.ok(merged[0].sources.includes("needle"));
   });
 
   it("estimates unmeasured companies as small, with low confidence and a stated reason", () => {

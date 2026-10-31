@@ -15,7 +15,7 @@ import { scrapeBrandenburgShk } from "./sources/brandenburg-shk";
 import { readGuildFolder } from "./sources/innung-folder";
 import { lushaToRecord } from "./sources/lusha";
 import { readNeedleCsv } from "./sources/needle-csv";
-import { mergeRecords, toScoreInput, type SourceRecord } from "./sources/record";
+import { enrichMerged, mergeRecords, toScoreInput, type SourceRecord } from "./sources/record";
 import type { ScoredRun } from "./types";
 
 export type PipelinePaths = { dataRoot: string };
@@ -69,7 +69,7 @@ export type PipelineOptions = {
   };
 };
 
-export type SourceCounts = { lusha: number; needle: number; needleOutsideNiche: number; guildFiles: number; guildFolder: number; brandenburgShk: number; scrapeErrors: string[] };
+export type SourceCounts = { lusha: number; needle: number; needleOutsideNiche: number; needleEnriched: number; guildFiles: number; guildFolder: number; brandenburgShk: number; scrapeErrors: string[] };
 
 export type PipelineSummary = {
   pagesFetched: number;
@@ -116,7 +116,7 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineSum
     totalInSearch: state.total,
     stoppedBecause: "no_client",
     resultsPath: null,
-    sources: { lusha: 0, needle: 0, needleOutsideNiche: 0, guildFiles: 0, guildFolder: 0, brandenburgShk: 0, scrapeErrors: [] },
+    sources: { lusha: 0, needle: 0, needleOutsideNiche: 0, needleEnriched: 0, guildFiles: 0, guildFolder: 0, brandenburgShk: 0, scrapeErrors: [] },
   };
 
   const addResults = (response: ProspectResponse, fetchedAt: string) => {
@@ -198,10 +198,12 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineSum
 
   const src = options.sources ?? {};
   const needleFile = src.needleCsv === false ? null : (src.needleCsv ?? path.join(paths.dataRoot, "raw", "needle", "leads.csv"));
+  let enrichOnly: SourceRecord[] = [];
   if (needleFile) {
     const needle = readNeedleCsv(needleFile, { allRegions: src.needleAllRegions });
     if (needle) {
       records.push(...needle.records);
+      enrichOnly = needle.enrichOnly;
       summary.sources.needle = needle.records.length;
       summary.sources.needleOutsideNiche = needle.outsideNiche;
       log(`Needle CSV: ${needle.records.length} companies in the niche, ${needle.outsideNiche} outside it`);
@@ -233,6 +235,10 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineSum
   }
 
   const merged = mergeRecords(records);
+  if (enrichOnly.length) {
+    summary.sources.needleEnriched = enrichMerged(merged, enrichOnly);
+    log(`Needle CSV rows outside the niche enriched ${summary.sources.needleEnriched} existing companies`);
+  }
   const inputs: ScoreInput[] = [];
   const ids = new Set<string>();
   for (const company of merged) {

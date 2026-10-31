@@ -1,6 +1,7 @@
 /**
  * The Needle lead list (CSV export) as a source: company name, domain, city, headcount,
  * LinkedIn company page and Lusha id. Person names stay out; the app works on companies.
+ * Rows in the niche become companies; rows outside it only enrich companies other sources found.
  */
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { csvObjects, pick } from "./csv";
@@ -8,8 +9,12 @@ import { legalFormFromName, websiteOf, type StaffCount } from "./lusha";
 import type { SourceRecord } from "./record";
 import { inNiche } from "./regions";
 
-export function needleRowsToRecords(text: string, options: { fetchedAt: string; allRegions?: boolean }): { records: SourceRecord[]; outsideNiche: number } {
+export function needleRowsToRecords(
+  text: string,
+  options: { fetchedAt: string; allRegions?: boolean },
+): { records: SourceRecord[]; outsideNiche: number; enrichOnly: SourceRecord[] } {
   const records: SourceRecord[] = [];
+  const enrichOnly: SourceRecord[] = [];
   let outsideNiche = 0;
   for (const row of csvObjects(text)) {
     const name = pick(row, ["Company Name", "Company", "Firma"]);
@@ -17,15 +22,13 @@ export function needleRowsToRecords(text: string, options: { fetchedAt: string; 
     const city = pick(row, ["City", "Ort"]);
     const state = pick(row, ["State", "Bundesland"]);
     const country = pick(row, ["Country Code", "Country"]);
-    if (!options.allRegions && (country && !/^(de|germany|deutschland)$/i.test(country) || !inNiche({ state, city }))) {
-      outsideNiche += 1;
-      continue;
-    }
+    const outside = !options.allRegions && ((country && !/^(de|germany|deutschland)$/i.test(country)) || !inNiche({ state, city }));
+    if (outside) outsideNiche += 1;
     const headcount = Number((pick(row, ["Employee Headcount", "Employees", "Mitarbeiter"]) ?? "").replace(/[^\d]/g, ""));
     const staff: StaffCount | undefined = headcount > 0 ? { value: headcount, low: headcount, high: headcount, exact: true } : undefined;
     const trade = pick(row, ["Trade Focus", "Sub-Industry"]);
     const linkedin = pick(row, ["LinkedIn", "Linkedin URL"]);
-    records.push({
+    (outside ? enrichOnly : records).push({
       source: "needle",
       name,
       legalForm: legalFormFromName(name),
@@ -39,10 +42,10 @@ export function needleRowsToRecords(text: string, options: { fetchedAt: string; 
         : [],
     });
   }
-  return { records, outsideNiche };
+  return { records, outsideNiche, enrichOnly };
 }
 
-export function readNeedleCsv(file: string, options: { allRegions?: boolean } = {}): { records: SourceRecord[]; outsideNiche: number } | null {
+export function readNeedleCsv(file: string, options: { allRegions?: boolean } = {}): ReturnType<typeof needleRowsToRecords> | null {
   if (!existsSync(file)) return null;
   const { mtime } = statSync(file);
   return needleRowsToRecords(readFileSync(file, "utf8"), { fetchedAt: mtime.toISOString(), allRegions: options.allRegions });
