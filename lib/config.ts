@@ -14,7 +14,27 @@ export const config = {
     id: "hvac-berlin-brandenburg",
     label: "HVAC contractors in Berlin and Brandenburg",
     /** Where the company list came from, as shown in breadcrumbs. */
-    source: "SHK guild export, Berlin",
+    source: "Lusha company search",
+  },
+
+  /** Lusha company search: what to look for and how much to spend per run (see docs/lusha.md). */
+  lusha: {
+    /** filters.companies.include for POST /v3/companies/prospecting. Check values with `npm run lusha:filters -- locations Berlin`. */
+    include: {
+      locations: [
+        { country: "Germany", state: "Berlin" },
+        { country: "Germany", state: "Brandenburg" },
+      ],
+      keywords: ["Heizung", "Sanitär", "SHK", "Haustechnik", "Klimatechnik", "Wärmepumpe"],
+    } as Record<string, unknown>,
+    /** Results per page (Lusha allows 10–100). */
+    pageSize: envNumber("LUSHA_PAGE_SIZE", 25),
+    /** Credits one pipeline run may spend at most. */
+    maxCreditsPerRun: envNumber("LUSHA_MAX_CREDITS_PER_RUN", 50),
+    /** A cached search page is fetched again after this many days. */
+    cacheDays: envNumber("LUSHA_CACHE_DAYS", 7),
+    /** Minutes between runs in watch mode. */
+    watchMinutes: envNumber("LUSHA_WATCH_MINUTES", 60),
   },
 
   /** The example customer's pricing, € per month. */

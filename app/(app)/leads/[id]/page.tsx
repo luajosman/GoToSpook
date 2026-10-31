@@ -24,6 +24,7 @@ const SOURCE_LABEL: Record<EvidenceSource, string> = {
   impressum: "Impressum",
   register: "Trade register",
   innung: "Guild member list",
+  lusha: "Lusha",
   jobs: "Job postings",
   manual: "Entered by a rep",
 };
@@ -33,6 +34,7 @@ const SOURCE_ORIGIN: Record<EvidenceSource, string> = {
   impressum: "Impressum, read with Needle",
   register: "Trade register, via the register API",
   innung: "SHK guild member list",
+  lusha: "Lusha company data",
   jobs: "Job boards",
   manual: "Rep corrections",
 };
@@ -353,7 +355,7 @@ async function LeadDetail({ run, params }: { run: LoadedRun; params: Params }) {
                 )}
               </dd>
               <dt className="text-muted">Listed in</dt>
-              <dd className="m-0">{company.sources.map((s) => (s === "innung" ? "guild member list" : "trade register")).join(", ")}</dd>
+              <dd className="m-0">{company.sources.map((s) => ({ innung: "guild member list", register: "trade register", lusha: "Lusha" })[s]).join(", ")}</dd>
             </dl>
           </section>
         </div>

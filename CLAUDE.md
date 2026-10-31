@@ -120,7 +120,7 @@ Read the matching file in `docs/` before writing any connector. Don't guess endp
 | Register API | Register details, new registrations | `REGISTER_API_KEY` |
 | AI Ark | Buying groups and lookalikes, high-touch only | `AI_ARK_API_KEY` |
 | Blitz API | Verify contact details, high-touch only | `BLITZ_API_KEY` |
-| Lusha | Direct numbers, top accounts only (150 credits) | `LUSHA_API_KEY` |
+| Lusha | Company search for the niche (the company list), capped per run; direct numbers for top accounts only | `LUSHA_API_KEY` |
 | Faxxing | Send the offer fax, on request only (100 faxes) | `FAXXING_API_KEY` |
 
 ## Rules

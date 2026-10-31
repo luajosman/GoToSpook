@@ -11,6 +11,7 @@ export type EvidenceSource =
   | "impressum"
   | "register"
   | "innung"
+  | "lusha"
   | "jobs"
   | "manual";
 
@@ -30,7 +31,7 @@ export type LegalForm =
   | "sole_trader"
   | "unknown";
 
-export type CompanySource = "innung" | "register";
+export type CompanySource = "innung" | "register" | "lusha";
 
 export type Company = {
   /** Stable slug from name and zip, also used as the personal-page slug. */
