@@ -137,7 +137,7 @@ export default function HowItWorksPage() {
 
   return (
     <>
-      <AppHeader current="how" />
+      <AppHeader />
       <main className="mx-auto w-full max-w-[1280px] px-8 pt-8 pb-16">
         <h1 className="m-0 text-[28px] leading-[1.2] font-semibold tracking-[-0.02em]">How it works</h1>
         <p className="mt-2 mb-0 max-w-[760px] text-base text-muted">

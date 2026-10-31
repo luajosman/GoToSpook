@@ -14,7 +14,7 @@ export default function PricingPage() {
 
   return (
     <>
-      <AppHeader current="pricing" />
+      <AppHeader />
       <main className="mx-auto w-full max-w-[1280px] px-8 pt-7 pb-16">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="m-0 text-[28px] leading-[1.2] font-semibold tracking-[-0.02em]">Pricing simulator</h1>

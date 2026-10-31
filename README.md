@@ -11,16 +11,17 @@ npm install
 npm run dev
 ```
 
-Then open <http://localhost:3000>.
+Then open <http://localhost:3000>. The header has Overview, Pipeline, Leads and Customers; How it works and Pricing sit in the footer.
 
 | Route | What it shows |
 |---|---|
-| `/pipeline` | Counts per motion and who to work on next |
+| `/` | Overview: totals, companies by motion, biggest accounts, data quality |
+| `/pipeline` | A board with one column per motion, biggest companies first |
 | `/leads` | Every scored company with predicted ACV, confidence and motion; filter with `?motion=high_touch` etc. |
 | `/leads/[id]` | One company: estimate, calculation, evidence with sources, motion and next step |
 | `/p/[slug]` | The company's personal page in German, with "Angebot per Fax senden" |
 | `/pricing` | Pricing simulator: change the three prices or add a starter plan and see who moves, on the loaded run |
-| `/inbound` | Live inbound scoring, shown as an empty feed until a form or Meta lead source is connected |
+| `/inbound` | Live inbound scoring, empty until a source is connected; not linked in the navigation |
 | `/customers` | Customers who are growing, shown as an empty state until a customer list exists |
 | `/how-it-works` | The three motions, routing rules, data sources and contact rules |
 

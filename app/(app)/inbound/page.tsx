@@ -17,7 +17,7 @@ const GRID = "grid grid-cols-[72px_minmax(200px,2fr)_190px_96px_minmax(220px,2.4
 export default function InboundPage() {
   return (
     <>
-      <AppHeader current="inbound" />
+      <AppHeader />
       <main className="mx-auto w-full max-w-[1280px] px-8 pt-7 pb-16">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
           <div className="min-w-0">
