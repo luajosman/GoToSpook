@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { AskBox } from "@/components/ai/AskBox";
 import { MOTION_BAR, MOTION_DOT, MotionPill } from "@/components/MotionPill";
 import { SampleBadge } from "@/components/SampleBadge";
 import { countByMotion, loadRun } from "@/lib/data";
@@ -95,6 +96,8 @@ export default function OverviewPage() {
             ))}
           </ul>
         </section>
+
+        <AskBox />
 
         <div className="mt-8 flex flex-wrap items-start gap-8">
           <section aria-labelledby="biggest-heading" className="min-w-0 flex-[999_1_560px] border-t border-line pt-6">

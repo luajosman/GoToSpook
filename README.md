@@ -37,6 +37,16 @@ Without a results file the app shows the committed sample (twelve fictional comp
 | `npm run pipeline` | Source, enrich and score all companies into `data/` (not built yet) |
 | `npm run validate -- <file>` | Check a results file against the schema the app reads (`npx tsx scripts/validate-results.ts --example` prints one) |
 
+## AI features
+
+Set `OPENAI_API_KEY` and `OPENAI_MODEL` in `.env.local`, then restart `npm run dev`.
+
+- **Briefing** on every lead page: why contact now, talking points, a German opening line and what to watch out for.
+- **Welcome drafts** on new companies: a German congratulations letter and an intro request to a partner.
+- **Ask the data** on the Overview: questions about the scored companies, answered with the companies they rest on.
+
+Answers are generated on demand, written only from the scored data, and cached in `data/cache/openai/`. Prices, ACV and motions always come from the scoring code. Details in `docs/openai.md`.
+
 ## How scoring works
 
 - `monthly = 200 + 100 × (officeSeats − 1) + 25 × technicians`, `acv = 12 × monthly` (`lib/score/formula.ts`)

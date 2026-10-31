@@ -4,6 +4,10 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { MotionPill } from "@/components/MotionPill";
+import { BriefingPanel } from "@/components/ai/BriefingPanel";
+import { WelcomePanel } from "@/components/ai/WelcomePanel";
+import { cachedBriefing } from "@/lib/ai/briefing";
+import { cachedWelcome } from "@/lib/ai/welcome";
 import { scaleMaxFor } from "@/components/LeadsTable";
 import { config } from "@/lib/config";
 import { findCompany, loadRun, type LoadedRun } from "@/lib/data";
@@ -314,6 +318,9 @@ async function LeadDetail({ run, params }: { run: LoadedRun; params: Params }) {
               </dd>
             </dl>
           </section>
+
+          <BriefingPanel companyId={company.id} initial={cachedBriefing(company)} />
+          {company.motion === "welcome" && <WelcomePanel companyId={company.id} initial={cachedWelcome(company)} />}
 
           <section aria-labelledby="company-heading" className="border-t border-line py-[22px]">
             <h2 id="company-heading" className="m-0 text-base font-semibold">
