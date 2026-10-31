@@ -16,6 +16,12 @@ Both connectors are TypeScript ports of the team's Python scripts (`needle/linke
 | `ELEVENLABS_VOICE_ID` | optional, default Sarah |
 | `OUTREACH_SELLER_NAME` | optional, who the outreach is for (default Meisterpfad) |
 
+Check the setup without sending anything (lists the Needle accounts and the ElevenLabs numbers and agents, and suggests the ids):
+
+```bash
+npm run outreach:check
+```
+
 Restart `npm run dev` after changing `.env.local`.
 
 ## LinkedIn

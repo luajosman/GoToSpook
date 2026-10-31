@@ -13,7 +13,8 @@
     "validate": "tsx scripts/validate-results.ts",
     "pipeline:watch": "tsx scripts/run-pipeline.ts --watch",
     "lusha:filters": "tsx scripts/lusha-filters.ts",
-    "calls:setup-agent": "tsx scripts/setup-call-agent.ts"
+    "calls:setup-agent": "tsx scripts/setup-call-agent.ts",
+    "outreach:check": "tsx scripts/check-outreach.ts"
   },
   "dependencies": {
     "next": "16.4.3",

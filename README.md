@@ -39,6 +39,7 @@ Companies come from the SHK guild directory for Brandenburg, the Needle lead lis
 | `npm run pipeline -- --rescore` | Score what is stored without calling Lusha |
 | `npm run lusha:filters -- locations Berlin` | Look up valid Lusha filter values for `lib/config.ts` |
 | `npm run calls:setup-agent` | Create the English calling agent on ElevenLabs and print its id |
+| `npm run outreach:check` | Check the LinkedIn and call setup without sending anything |
 | `npm run validate -- <file>` | Check a results file against the schema the app reads (`npx tsx scripts/validate-results.ts --example` prints one) |
 
 ## Data pipeline
