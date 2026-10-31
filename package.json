@@ -10,7 +10,9 @@
     "typecheck": "next typegen && tsc --noEmit",
     "check": "tsx --test tests/*.test.ts",
     "pipeline": "tsx scripts/run-pipeline.ts",
-    "validate": "tsx scripts/validate-results.ts"
+    "validate": "tsx scripts/validate-results.ts",
+    "pipeline:watch": "tsx scripts/run-pipeline.ts --watch",
+    "lusha:filters": "tsx scripts/lusha-filters.ts"
   },
   "dependencies": {
     "next": "16.4.3",
