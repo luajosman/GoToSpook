@@ -5,10 +5,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { LeadsTable, parseMotionFilter } from "@/components/LeadsTable";
 import { MOTION_DOT } from "@/components/MotionPill";
 import { SampleBadge } from "@/components/SampleBadge";
-import { config } from "@/lib/config";
 import { countByMotion, loadRun, type LoadedRun } from "@/lib/data";
 import { count, dateEn, money } from "@/lib/format";
-import { pricingFormulaText } from "@/lib/score/formula";
 import { MOTION_LABELS } from "@/lib/score/motion";
 import type { Motion } from "@/lib/types";
 
@@ -17,10 +15,10 @@ export const metadata: Metadata = { title: "Leads" };
 type SearchParams = Promise<{ motion?: string | string[] }>;
 
 const STAT_NOTES: Record<Motion, string> = {
-  high_touch: "Above the threshold, a named rep",
-  check: "Signals disagree, needs a look",
-  automated: "Self-serve, letter and fax on request",
-  welcome: "Registered in the last 90 days",
+  high_touch: "Call these",
+  check: "Confirm the size",
+  automated: "Letter and personal page",
+  welcome: "New, say hello",
 };
 
 async function FilteredLeads({ run, searchParams }: { run: LoadedRun; searchParams: SearchParams }) {
@@ -51,7 +49,7 @@ export default function LeadsPage({ searchParams }: { searchParams: SearchParams
               {run.origin === "sample" && <SampleBadge />}
             </div>
             <p className="mt-2 mb-0 text-base text-muted">
-              {run.niche.label}. Threshold {money(run.threshold)} ACV, {run.thresholdNote}. Scored {dateEn(run.generatedAt)}.
+              {run.niche.label}. Threshold {money(run.threshold)} ACV. Scored {dateEn(run.generatedAt)}.
             </p>
           </div>
           <Link
@@ -81,29 +79,6 @@ export default function LeadsPage({ searchParams }: { searchParams: SearchParams
           </Suspense>
         </section>
 
-        <div className="mt-5 flex flex-wrap items-start gap-5">
-          <section aria-labelledby="pricing-heading" className="min-w-0 flex-[999_1_520px] border-t border-line py-[22px]">
-            <h2 id="pricing-heading" className="m-0 text-base font-semibold">
-              Pricing for this niche
-            </h2>
-            <p className="mt-3 mb-0 text-[19px] leading-[1.6] font-medium tabular-nums">{pricingFormulaText()}</p>
-            <p className="mt-2 mb-0 text-[15px] text-muted">
-              The example customer&rsquo;s plan: the first office seat, every further seat and every field technician have
-              their own price. When office staff is unknown, one seat per {config.pricing.techniciansPerOfficeSeat} technicians is assumed and the confidence drops.
-            </p>
-          </section>
-          <section aria-labelledby="next-heading" className="min-w-0 flex-[1_1_320px] border-t border-line py-[22px]">
-            <h2 id="next-heading" className="m-0 text-base font-semibold">
-              What happens next
-            </h2>
-            <ol className="mt-3 mb-0 flex list-decimal flex-col gap-1.5 pl-[22px] text-muted">
-              <li>High-touch accounts get a research brief and a named owner</li>
-              <li>Automated companies get a personal page, a letter and a fax on request</li>
-              <li>New companies get a congratulations letter and a warm intro</li>
-              <li>Check leads wait for a person to confirm the team size</li>
-            </ol>
-          </section>
-        </div>
       </main>
     </>
   );

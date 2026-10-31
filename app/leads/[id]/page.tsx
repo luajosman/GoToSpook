@@ -348,9 +348,6 @@ async function LeadDetail({ run, params }: { run: LoadedRun; params: Params }) {
               <dt className="text-muted">Listed in</dt>
               <dd className="m-0">{company.sources.map((s) => (s === "innung" ? "guild member list" : "trade register")).join(", ")}</dd>
             </dl>
-            <p className="mt-3 mb-0 text-[13px] text-muted">
-              Channel rules follow German rules for business contact: no cold marketing email, letters with an easy opt-out, fax only on request. Guidance, not legal advice.
-            </p>
           </section>
         </div>
       </div>

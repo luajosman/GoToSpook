@@ -84,22 +84,6 @@ export default function InboundPage() {
               <p className="mt-0.5 mb-0 text-[15px] text-muted">The first lead above the threshold shows up here with its briefing.</p>
             </section>
 
-            <section aria-labelledby="meta-heading" className="border-t border-line py-[22px]">
-              <h2 id="meta-heading" className="m-0 text-base font-semibold">
-                What Meta learns
-              </h2>
-              <p className="mt-2 mb-0 text-[15px] text-ink-soft">
-                For every lead above your threshold, we send a quality event with its predicted ACV. Your campaigns then optimise for bigger
-                companies, not just more form fills.
-              </p>
-              <dl className="mt-3.5 mb-0 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-[15px]">
-                <dt className="text-muted">Meta leads above threshold, last month</dt>
-                <dd className="m-0 text-right font-semibold">–</dd>
-                <dt className="text-muted">This month so far</dt>
-                <dd className="m-0 text-right font-semibold">–</dd>
-              </dl>
-            </section>
-
             <section aria-labelledby="sources-heading" className="border-t border-line py-[22px]">
               <h2 id="sources-heading" className="m-0 text-base font-semibold">
                 Sources

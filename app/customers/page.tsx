@@ -49,13 +49,9 @@ export default function CustomersPage() {
             <h2 id="empty-heading" className="m-0 text-base font-semibold">
               No customer list yet.
             </h2>
-            <p className="mt-1.5 mb-0 text-[15px] text-ink-soft">
-              Once your customers are listed, the same public signals that size a lead (team pages, job ads, new locations) show which of
-              them have outgrown their licenses, with the added ACV and a suggested message for the account manager.
-            </p>
-            <p className="mt-3 mb-0 text-[15px] text-muted">
-              To feed it: a customer file under <code className="rounded bg-white px-1 text-[14px]">data/</code> with name, zip, licensed
-              technicians and office seats, read the same way as the scored run. Nothing is stored in the repo.
+            <p className="mt-1.5 mb-0 text-[15px] text-muted">
+              Add a customer file under <code className="rounded bg-white px-1 text-[14px]">data/</code> (name, zip, licensed technicians and
+              office seats) and growing customers show up here.
             </p>
           </div>
         </section>

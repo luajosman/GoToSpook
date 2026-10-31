@@ -15,13 +15,14 @@ Then open <http://localhost:3000>.
 
 | Route | What it shows |
 |---|---|
-| `/pipeline` | Counts per motion, the three motions and the routing rules |
+| `/pipeline` | Counts per motion and who to work on next |
 | `/leads` | Every scored company with predicted ACV, confidence and motion; filter with `?motion=high_touch` etc. |
 | `/leads/[id]` | One company: estimate, calculation, evidence with sources, motion and next step |
 | `/p/[slug]` | The company's personal page in German, with "Angebot per Fax senden" |
 | `/pricing` | Pricing simulator: change the three prices or add a starter plan and see who moves, on the loaded run |
 | `/inbound` | Live inbound scoring, shown as an empty feed until a form or Meta lead source is connected |
 | `/customers` | Customers who are growing, shown as an empty state until a customer list exists |
+| `/how-it-works` | The three motions, routing rules, data sources and contact rules |
 
 Without a results file the app shows the committed sample (twelve fictional companies from the design mockup, marked "Sample data"). A real run goes to `data/results/scored.json`, which is git-ignored and picked up automatically. The file's contract for whoever writes the pipeline is in `docs/results-format.md`.
 

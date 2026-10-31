@@ -170,7 +170,7 @@ export function PricingSimulator({ companies, threshold, generatedAt }: { compan
             ))}
           </div>
           <p className="mt-[18px] mb-0 text-sm text-muted">
-            Prices change what each company is worth to you, not how big it is. The threshold stays at {money(threshold)} so the numbers compare.
+            Threshold fixed at {money(threshold)}.
           </p>
         </section>
 
