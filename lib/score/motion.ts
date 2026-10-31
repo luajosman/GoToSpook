@@ -28,7 +28,7 @@ function euro(value: number): string {
 
 export function assignMotion(
   company: Pick<Company, "registeredAt">,
-  estimate: Estimate,
+  estimate: Pick<Estimate, "acv" | "confidence">,
   threshold: number,
   now: Date,
 ): { motion: Motion; motionReason: string } {

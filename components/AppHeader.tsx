@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 
-type Current = "pipeline" | "leads";
+export type Current = "pipeline" | "leads" | "inbound" | "customers" | "pricing";
 
-const NAV: Array<{ key: Current; label: string; href: "/pipeline" | "/leads" }> = [
+const NAV: Array<{ key: Current; label: string; href: "/pipeline" | "/leads" | "/inbound" | "/customers" | "/pricing" }> = [
   { key: "pipeline", label: "Pipeline", href: "/pipeline" },
   { key: "leads", label: "Leads", href: "/leads" },
+  { key: "inbound", label: "Inbound", href: "/inbound" },
+  { key: "customers", label: "Customers", href: "/customers" },
+  { key: "pricing", label: "Pricing", href: "/pricing" },
 ];
-
-/** Parts of the design that are not in today's demo: shown, but not linked. */
-const PLANNED = ["Inbound", "Alerts", "Customers", "Niches", "Pricing", "Learning"];
 
 const ITEM = "inline-flex min-h-11 items-center px-3 text-[15px] no-underline";
 
@@ -39,11 +39,6 @@ export function AppHeader({ current }: { current?: Current }) {
                 </Link>
               ),
             )}
-            {PLANNED.map((label) => (
-              <span key={label} title="Not in today's demo" className={`${ITEM} cursor-default font-medium text-faint`}>
-                {label}
-              </span>
-            ))}
           </nav>
         </div>
         <span
