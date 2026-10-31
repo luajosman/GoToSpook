@@ -14,7 +14,8 @@
     "pipeline:watch": "tsx scripts/run-pipeline.ts --watch",
     "lusha:filters": "tsx scripts/lusha-filters.ts",
     "calls:setup-agent": "tsx scripts/setup-call-agent.ts",
-    "outreach:check": "tsx scripts/check-outreach.ts"
+    "outreach:check": "tsx scripts/check-outreach.ts",
+    "calls:import-number": "tsx scripts/import-caller-number.ts"
   },
   "dependencies": {
     "next": "16.4.3",

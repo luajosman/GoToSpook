@@ -1,10 +1,11 @@
 /**
- * Outreach actions behind the lead page's LinkedIn and phone buttons. Every action is started by a
- * person clicking a confirm button, is logged on the lead, and is guarded against repeats.
+ * Outreach actions behind the lead page's LinkedIn and phone buttons. LinkedIn: the app enrolls a person
+ * in a Needle campaign and Needle sends. Calls: an ElevenLabs agent. Every action needs a confirm click,
+ * is logged on the lead, and is guarded against repeats.
  */
 import { config } from "../config";
 import { createCallClient, type CallClient } from "../connectors/elevenlabs";
-import { createNeedleClient, type NeedleClient, type PersonHit } from "../connectors/needle";
+import { createNeedleClient, NeedleNotConfiguredError, type NeedleCampaign, type NeedleClient, type PersonHit } from "../connectors/needle";
 import { normalizeFaxNumber } from "../fax/number";
 import type { ScoredCompany } from "../types";
 import { addEvent, listEvents, updateEvent, type OutreachEvent } from "./store";
@@ -20,14 +21,10 @@ export type OutreachDeps = { needle?: NeedleClient; calls?: CallClient; root?: s
 
 const DAY = 86_400_000;
 
-export function defaultLinkedinPrompt(company: ScoredCompany): string {
-  const techs = company.estimate.technicians.value;
-  return [
-    `Write a short, personal first LinkedIn message in German (formal "Sie") from ${config.outreach.sellerName}.`,
-    `${config.outreach.sellerName} helps HVAC/SHK trade businesses automate their back office, quotes and technician scheduling.`,
-    `The recipient works at ${company.name}${company.address.city ? ` in ${company.address.city}` : ""}, a company with about ${techs} field technicians.`,
-    "Use their profile for one specific, true detail. Under 300 characters, no hype, no links, end with one question.",
-  ].join(" ");
+export function needleCampaignId(): string {
+  const id = process.env.NEEDLE_CAMPAIGN_ID;
+  if (!id) throw new NeedleNotConfiguredError(["NEEDLE_CAMPAIGN_ID"]);
+  return id;
 }
 
 export async function searchLinkedinPeople(company: ScoredCompany, query: { keywords?: string; title?: string }, deps: OutreachDeps = {}): Promise<PersonHit[]> {
@@ -35,36 +32,87 @@ export async function searchLinkedinPeople(company: ScoredCompany, query: { keyw
   return needle.searchPeople({ keywords: query.keywords?.trim() || company.name, company: company.name, title: query.title?.trim() || undefined, limit: 8 });
 }
 
-export async function previewLinkedinMessage(company: ScoredCompany, identity: string, prompt: string | undefined, deps: OutreachDeps = {}): Promise<string> {
+export async function campaignInfo(deps: OutreachDeps = {}): Promise<NeedleCampaign> {
   const needle = deps.needle ?? createNeedleClient();
-  return needle.composePreview({ identity, prompt: prompt?.trim() || defaultLinkedinPrompt(company) });
+  return needle.getCampaign(needleCampaignId());
 }
 
-export async function sendLinkedin(
+function splitName(name: string): { firstName?: string; lastName?: string } {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return parts[0] ? { firstName: parts[0] } : {};
+  return { firstName: parts.slice(0, -1).join(" "), lastName: parts.at(-1) };
+}
+
+/** Adds the person to Needle as a lead and enrolls them in the campaign; Needle writes and sends the messages. */
+export async function enrollInCampaign(
   company: ScoredCompany,
-  input: { person: Pick<PersonHit, "identity" | "name" | "headline" | "profileUrl">; action: "invitation" | "message"; text: string },
+  input: { person: Pick<PersonHit, "identity" | "name" | "headline" | "profileUrl"> },
   deps: OutreachDeps = {},
 ): Promise<OutreachEvent> {
   const now = (deps.now ?? (() => new Date()))();
-  const text = input.text.trim();
-  if (!text) throw new OutreachBlockedError("The message is empty.");
-  if (input.action === "invitation" && text.length > 300) throw new OutreachBlockedError("An invitation note can have at most 300 characters.");
-  const repeat = listEvents(company.id, deps.root).find(
-    (e) => e.type === "linkedin" && e.status === "sent" && e.linkedin?.identity === input.person.identity && e.linkedin.action === input.action && now.getTime() - new Date(e.at).getTime() < 30 * DAY,
+  const campaignId = needleCampaignId();
+  const already = listEvents(company.id, deps.root).find(
+    (e) => e.type === "linkedin" && e.status === "enrolled" && e.linkedin?.identity === input.person.identity && e.needle?.campaignId === campaignId,
   );
-  if (repeat) throw new OutreachBlockedError(`${input.person.name} already got this ${input.action} on ${repeat.at.slice(0, 10)}.`);
+  if (already) throw new OutreachBlockedError(`${input.person.name} is already in this campaign since ${already.at.slice(0, 10)}.`);
 
   const needle = deps.needle ?? createNeedleClient();
-  const linkedin = { action: input.action, identity: input.person.identity, name: input.person.name, headline: input.person.headline || undefined, profileUrl: input.person.profileUrl || undefined, text };
+  const linkedin = { action: "campaign" as const, identity: input.person.identity, name: input.person.name, headline: input.person.headline || undefined, profileUrl: input.person.profileUrl || undefined };
   try {
-    if (input.action === "invitation") await needle.sendInvitation({ identity: input.person.identity, note: text });
-    else await needle.sendMessage({ identity: input.person.identity, text });
-    return addEvent(company.id, { type: "linkedin", status: "sent", at: now.toISOString(), linkedin }, deps.root);
+    const campaign = await needle.getCampaign(campaignId);
+    const domain = company.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const { leadId } = await needle.upsertLead({
+      linkedin: input.person.profileUrl || input.person.identity,
+      timezone: "Europe/Berlin",
+      ...splitName(input.person.name),
+      companyName: company.name,
+      ...(domain ? { companyDomain: domain } : {}),
+      ...(input.person.headline ? { jobTitle: input.person.headline } : {}),
+    });
+    const result = await needle.enrollLead(campaignId, leadId);
+    if (!result.accepted) throw new OutreachBlockedError(`Needle did not enroll ${input.person.name}: ${result.reason}.`);
+    return addEvent(
+      company.id,
+      { type: "linkedin", status: "enrolled", at: now.toISOString(), linkedin, needle: { leadId, campaignId, campaignName: campaign.name, campaignStatus: campaign.status } },
+      deps.root,
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     addEvent(company.id, { type: "linkedin", status: "failed", at: now.toISOString(), linkedin, error: message }, deps.root);
     throw error;
   }
+}
+
+/** Pulls the lead's enrollment status and events (invitations, messages with their text) from Needle. */
+export async function syncNeedleLead(company: ScoredCompany, eventId: string, deps: OutreachDeps = {}): Promise<OutreachEvent> {
+  const event = listEvents(company.id, deps.root).find((e) => e.id === eventId);
+  if (!event?.needle) throw new OutreachBlockedError("No Needle enrollment on this lead.");
+  const needle = deps.needle ?? createNeedleClient();
+  const [enrollment, events, campaign] = await Promise.all([
+    needle.getLeadEnrollment(event.needle.leadId, event.needle.campaignId),
+    needle.listLeadEvents(event.needle.leadId),
+    needle.getCampaign(event.needle.campaignId),
+  ]);
+  const now = (deps.now ?? (() => new Date()))();
+  return updateEvent(
+    company.id,
+    eventId,
+    (e) => ({
+      ...e,
+      needle: {
+        ...e.needle!,
+        campaignName: campaign.name,
+        campaignStatus: campaign.status,
+        ...(enrollment ? { enrollment } : {}),
+        events: events
+          .filter((x) => x.type !== "lead_created")
+          .sort((a, b) => a.at.localeCompare(b.at))
+          .map((x) => ({ id: x.id, type: x.type, label: x.label, at: x.at, ...(x.text ? { text: x.text } : {}) })),
+        syncedAt: now.toISOString(),
+      },
+    }),
+    deps.root,
+  )!;
 }
 
 export function callVariables(company: ScoredCompany, contactName?: string): Record<string, string> {

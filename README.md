@@ -40,6 +40,7 @@ Companies come from the SHK guild directory for Brandenburg, the Needle lead lis
 | `npm run lusha:filters -- locations Berlin` | Look up valid Lusha filter values for `lib/config.ts` |
 | `npm run calls:setup-agent` | Create the English calling agent on ElevenLabs and print its id |
 | `npm run outreach:check` | Check the LinkedIn and call setup without sending anything |
+| `npm run calls:import-number -- <number> --write` | Import a Twilio-verified number as the caller for AI calls |
 | `npm run validate -- <file>` | Check a results file against the schema the app reads (`npx tsx scripts/validate-results.ts --example` prints one) |
 
 ## Data pipeline
@@ -58,7 +59,7 @@ The pages read the results file on each request in `npm run dev`. A production b
 
 ## Outreach
 
-Each lead page has a LinkedIn button (find a person at the company, draft with AI, send a connection request or message through Needle) and a phone button (an English AI agent calls through ElevenLabs). Both need a confirm click, and the message or the call transcript is saved on the lead. Setup and the legal points to check first: `docs/outreach.md`.
+Each lead page has a LinkedIn button (find a person at the company and enroll them in your Needle campaign, which writes and sends the messages) and a phone button (an English AI agent calls through ElevenLabs). Both need a confirm click; the messages Needle sent and the call transcript are saved on the lead. Setup and the legal points to check first: `docs/outreach.md`.
 
 ## AI features
 

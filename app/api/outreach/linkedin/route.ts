@@ -1,20 +1,22 @@
-/** LinkedIn outreach through Needle: find people at the company, draft a message, send it. */
+/** LinkedIn through Needle: find people at the company, show the campaign, enroll a person, sync what Needle sent. */
 import { z } from "zod";
 import { withCompany } from "@/lib/outreach/http";
-import { previewLinkedinMessage, searchLinkedinPeople, sendLinkedin } from "@/lib/outreach/service";
+import { campaignInfo, enrollInCampaign, searchLinkedinPeople, syncNeedleLead } from "@/lib/outreach/service";
 
 const person = z.object({ identity: z.string().min(1).max(200), name: z.string().min(1).max(200), headline: z.string().max(400).default(""), profileUrl: z.string().max(400).default("") });
 
 const bodySchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("search"), companyId: z.string().min(1), keywords: z.string().max(200).optional(), title: z.string().max(100).optional() }),
-  z.object({ op: z.literal("preview"), companyId: z.string().min(1), identity: z.string().min(1).max(200), prompt: z.string().max(2000).optional() }),
-  z.object({ op: z.literal("send"), companyId: z.string().min(1), person, action: z.enum(["invitation", "message"]), text: z.string().min(1).max(3000) }),
+  z.object({ op: z.literal("campaign"), companyId: z.string().min(1) }),
+  z.object({ op: z.literal("enroll"), companyId: z.string().min(1), person }),
+  z.object({ op: z.literal("sync"), companyId: z.string().min(1), eventId: z.string().min(1).max(100) }),
 ]);
 
 export async function POST(request: Request) {
   return withCompany(request, bodySchema, async (company, body) => {
     if (body.op === "search") return searchLinkedinPeople(company, body);
-    if (body.op === "preview") return previewLinkedinMessage(company, body.identity, body.prompt);
-    return sendLinkedin(company, { person: body.person, action: body.action, text: body.text });
+    if (body.op === "campaign") return campaignInfo();
+    if (body.op === "enroll") return enrollInCampaign(company, { person: body.person });
+    return syncNeedleLead(company, body.eventId);
   });
 }

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
 import { createCallClient, toConversation, type CallClient } from "../lib/connectors/elevenlabs";
-import { createNeedleClient, identityFromUrl, NeedleNotConfiguredError, parseMcpBody, type NeedleClient } from "../lib/connectors/needle";
-import { callVariables, OutreachBlockedError, sendLinkedin, startCall, syncCall } from "../lib/outreach/service";
+import { createNeedleClient, identityFromUrl, NeedleNotConfiguredError, parseEnrollResult, parseMcpBody, type NeedleClient } from "../lib/connectors/needle";
+import { callVariables, enrollInCampaign, OutreachBlockedError, startCall, syncCall, syncNeedleLead } from "../lib/outreach/service";
 import { listEvents } from "../lib/outreach/store";
 import { sampleRun } from "./fixtures/sample";
 
@@ -20,26 +20,39 @@ after(() => roots.forEach((r) => rmSync(r, { recursive: true, force: true })));
 const company = sampleRun.companies.find((c) => c.id === "brandt-soehne-haustechnik-13581")!;
 const person = { identity: "jane-doe-123", name: "Jane Doe", headline: "Geschäftsführerin", profileUrl: "https://www.linkedin.com/in/jane-doe-123/" };
 
-function fakeNeedle(fail = false) {
-  const sent: Array<{ tool: string; args: unknown }> = [];
+const CAMPAIGN = "00000000-0000-4000-8000-000000000001";
+process.env.NEEDLE_CAMPAIGN_ID = CAMPAIGN;
+
+function fakeNeedle(options: { skip?: string; fail?: boolean } = {}) {
+  const calls: Array<{ tool: string; args: unknown }> = [];
   const needle: NeedleClient = {
     async searchPeople() {
       return [{ ...person, location: "Berlin", degree: "2" }];
     },
-    async composePreview() {
-      return "Guten Tag Frau Doe, …";
+    async getCampaign(id) {
+      return { id, name: "SHK outreach", status: "draft" };
     },
-    async sendInvitation(args) {
-      if (fail) throw new Error("LinkedIn limit reached");
-      sent.push({ tool: "invite", args });
-      return {};
+    async upsertLead(args) {
+      if (options.fail) throw new Error("Needle is down");
+      calls.push({ tool: "upsertLead", args });
+      return { leadId: "lead-1", created: true };
     },
-    async sendMessage(args) {
-      sent.push({ tool: "message", args });
-      return {};
+    async enrollLead(campaignId, leadId) {
+      calls.push({ tool: "enrollLead", args: { campaignId, leadId } });
+      return options.skip ? { accepted: false, reason: options.skip } : { accepted: true };
+    },
+    async getLeadEnrollment() {
+      return "active";
+    },
+    async listLeadEvents() {
+      return [
+        { id: "e2", type: "linkedin_message_sent", label: "Message sent", at: "2026-11-02T09:10:00Z", text: "Guten Tag Frau Doe, …" },
+        { id: "e1", type: "linkedin_invitation_sent", label: "Invitation sent", at: "2026-11-01T09:00:00Z" },
+        { id: "e0", type: "lead_created", label: "Lead created", at: "2026-10-31T16:00:00Z" },
+      ];
     },
   };
-  return { needle, sent };
+  return { needle, calls };
 }
 
 function fakeCalls() {
@@ -114,23 +127,54 @@ describe("ElevenLabs connector", () => {
   });
 });
 
-describe("LinkedIn outreach", () => {
-  it("sends and saves the message on the lead, and blocks a repeat", async () => {
+describe("LinkedIn through a Needle campaign", () => {
+  it("adds the person as a lead, enrolls them, and logs it on the company", async () => {
     const r = root();
-    const { needle, sent } = fakeNeedle();
-    const event = await sendLinkedin(company, { person, action: "invitation", text: "Guten Tag Frau Doe" }, { needle, root: r });
-    assert.equal(event.status, "sent");
-    assert.equal(sent.length, 1);
-    assert.equal(listEvents(company.id, r)[0].linkedin?.text, "Guten Tag Frau Doe");
-    await assert.rejects(sendLinkedin(company, { person, action: "invitation", text: "Nochmal" }, { needle, root: r }), OutreachBlockedError);
-    assert.equal(sent.length, 1);
+    const { needle, calls } = fakeNeedle();
+    const event = await enrollInCampaign(company, { person }, { needle, root: r });
+    assert.equal(event.status, "enrolled");
+    assert.deepEqual(calls.map((c) => c.tool), ["upsertLead", "enrollLead"]);
+    const lead = calls[0].args as Record<string, string>;
+    assert.equal(lead.linkedin, person.profileUrl);
+    assert.equal(lead.firstName, "Jane");
+    assert.equal(lead.lastName, "Doe");
+    assert.equal(lead.companyName, company.name);
+    assert.equal(lead.timezone, "Europe/Berlin");
+    assert.deepEqual(calls[1].args, { campaignId: CAMPAIGN, leadId: "lead-1" });
+    assert.equal(listEvents(company.id, r)[0].needle?.campaignStatus, "draft");
   });
 
-  it("rejects notes over 300 characters and logs failures", async () => {
+  it("blocks enrolling the same person twice and reports Needle's skip reason", async () => {
     const r = root();
-    await assert.rejects(sendLinkedin(company, { person, action: "invitation", text: "x".repeat(301) }, { needle: fakeNeedle().needle, root: r }), OutreachBlockedError);
-    await assert.rejects(sendLinkedin(company, { person, action: "invitation", text: "Hallo" }, { needle: fakeNeedle(true).needle, root: r }), /limit/);
-    assert.equal(listEvents(company.id, r)[0].status, "failed");
+    await enrollInCampaign(company, { person }, { needle: fakeNeedle().needle, root: r });
+    await assert.rejects(enrollInCampaign(company, { person }, { needle: fakeNeedle().needle, root: r }), OutreachBlockedError);
+    const other = { ...person, identity: "max-x", name: "Max X", profileUrl: "" };
+    await assert.rejects(enrollInCampaign(company, { person: other }, { needle: fakeNeedle({ skip: "recently_contacted" }).needle, root: r }), /recently_contacted/);
+    assert.equal(listEvents(company.id, r).at(-1)?.status, "failed");
+  });
+
+  it("syncs what Needle sent, oldest first, without the lead_created event", async () => {
+    const r = root();
+    const { needle } = fakeNeedle();
+    const event = await enrollInCampaign(company, { person }, { needle, root: r });
+    const synced = await syncNeedleLead(company, event.id, { needle, root: r });
+    assert.equal(synced.needle?.enrollment, "active");
+    assert.deepEqual(synced.needle?.events?.map((e) => e.type), ["linkedin_invitation_sent", "linkedin_message_sent"]);
+    assert.equal(synced.needle?.events?.[1].text, "Guten Tag Frau Doe, …");
+  });
+
+  it("needs a campaign id", async () => {
+    const saved = process.env.NEEDLE_CAMPAIGN_ID;
+    delete process.env.NEEDLE_CAMPAIGN_ID;
+    await assert.rejects(enrollInCampaign(company, { person }, { needle: fakeNeedle().needle, root: root() }), NeedleNotConfiguredError);
+    process.env.NEEDLE_CAMPAIGN_ID = saved;
+  });
+
+  it("reads Needle's enroll answers in their likely shapes", () => {
+    assert.deepEqual(parseEnrollResult({ accepted: ["l1"], skipped: [] }, "l1"), { accepted: true });
+    assert.deepEqual(parseEnrollResult({ accepted: [], skipped: [{ leadId: "l1", reason: "suppressed" }] }, "l1"), { accepted: false, reason: "suppressed" });
+    assert.deepEqual(parseEnrollResult({ results: [{ leadId: "l1", status: "skipped", reason: "missing_identity" }] }, "l1"), { accepted: false, reason: "missing_identity" });
+    assert.deepEqual(parseEnrollResult({ results: [{ leadId: "l1", status: "accepted" }] }, "l1"), { accepted: true });
   });
 });
 

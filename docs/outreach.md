@@ -10,9 +10,11 @@ Both connectors are TypeScript ports of the team's Python scripts (`needle/linke
 |---|---|
 | `NEEDLE_API_KEY` | Needle dashboard (same key as `needle/.env`) |
 | `NEEDLE_CONNECTED_ACCOUNT_ID` | `python3 linkedin_outreach.py status` in the needle folder: the `ID` of the LinkedIn account |
+| `NEEDLE_CAMPAIGN_ID` | the Needle campaign leads are enrolled in (`npm run outreach:check` lists them) |
 | `ELEVENLABS_API_KEY` | ElevenLabs dashboard (same key as `elevenlabs/.env`) |
 | `ELEVENLABS_AGENT_ID` | `npm run calls:setup-agent` creates the English agent and prints the id |
-| `ELEVENLABS_PHONE_NUMBER_ID` | `python cold_call.py list-phones` in the elevenlabs folder: the imported Twilio number's `phone_number_id` |
+| `ELEVENLABS_PHONE_NUMBER_ID` | the caller number's id in ElevenLabs: `npm run calls:import-number` (below) or `python cold_call.py list-phones` |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | only for `calls:import-number`; use a fresh token |
 | `ELEVENLABS_VOICE_ID` | optional, default Sarah |
 | `OUTREACH_SELLER_NAME` | optional, who the outreach is for (default Meisterpfad) |
 
@@ -24,14 +26,26 @@ npm run outreach:check
 
 Restart `npm run dev` after changing `.env.local`.
 
-## LinkedIn
+## LinkedIn (Needle campaign)
 1. Search people at the company (Needle `needleSearchLinkedinPeopleClassic`, filtered by company and job title).
-2. Pick a person, draft the message with AI from their profile (`needleComposePreview`, German, formal) or write it yourself.
-3. Send a connection request with a note (max 300 characters, `needleSendLinkedinInvitation`) or a message to an existing connection (`needleSendLinkedinMessage`).
-The same invitation or message to the same person is blocked for 30 days.
+2. Pick a person and add them to the campaign: `needleUpsertLead` (LinkedIn profile, name, company, domain, Europe/Berlin) and `needleEnrollCampaignLeads`.
+3. Needle runs the campaign: it checks the connection, sends the invitation, writes the first message with AI and follows up. It sends nothing while the campaign is a draft or paused; activate it in Needle.
+4. "Refresh from Needle" on the lead loads the enrollment status and the lead's events (`needleGetLead`, `needleListLeadEvents`), including the text of every message Needle sent.
+The same person is not enrolled twice in the same campaign; Needle's own skips (do-not-contact, recently contacted) are shown as the reason.
 
 ## AI calls
 `POST /v1/convai/twilio/outbound-call` with the agent, the Twilio number and the company's facts as dynamic variables. The agent speaks English, says at the start that it is an AI and that the call is recorded and transcribed, and ends the call if the person objects, is not interested or asks not to be called again. One call per company per day. "Get status and transcript" on the lead loads `GET /v1/convai/conversations/{id}`.
+
+## Calling from your own number
+ElevenLabs calls from a number it can control through Twilio. A number not bought from Twilio, such as a German mobile number, works as a **Verified Caller ID**, for outbound calls only:
+1. Twilio Console > Phone Numbers > Manage > Verified Caller IDs > Add: enter the number; Twilio calls it (in English) with a code you type in.
+2. Put `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` into `.env.local`, then import the number and make it the caller:
+
+```bash
+npm run calls:import-number -- 01571234567 --write
+```
+
+3. `npm run outreach:check`, then restart `npm run dev`.
 
 ## Before you use it for real
 This is guidance, not legal advice:

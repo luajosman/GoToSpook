@@ -1,6 +1,7 @@
 /**
  * Needle LinkedIn outreach, ported from the team's needle/linkedin_outreach.py: JSON-RPC
- * "tools/call" against Needle's MCP endpoint with a Bearer key. Server-side only.
+ * "tools/call" against Needle's MCP endpoint with a Bearer key. The app finds people and enrolls
+ * them in a Needle campaign; Needle writes and sends the messages. Server-side only.
  */
 import { z } from "zod";
 
@@ -24,6 +25,7 @@ export function needleStatus(): { configured: boolean; missing: string[] } {
   const missing: string[] = [];
   if (!process.env.NEEDLE_API_KEY) missing.push("NEEDLE_API_KEY");
   if (!process.env.NEEDLE_CONNECTED_ACCOUNT_ID) missing.push("NEEDLE_CONNECTED_ACCOUNT_ID");
+  if (!process.env.NEEDLE_CAMPAIGN_ID) missing.push("NEEDLE_CAMPAIGN_ID");
   return { configured: missing.length === 0, missing };
 }
 
@@ -92,11 +94,40 @@ export function toPersonHit(raw: z.infer<typeof peopleHitSchema>): PersonHit | n
   };
 }
 
+export type NeedleCampaign = { id: string; name: string; status: string };
+export type NeedleLeadEvent = { id: string; type: string; label: string; at: string; campaignName?: string; text?: string };
+export type EnrollResult = { accepted: boolean; reason?: string };
+
+/**
+ * needleEnrollCampaignLeads "returns accepted or skipped per lead id"; the exact shape is not published,
+ * so this accepts the common forms: { accepted: [...], skipped: [...] } or a list of { leadId, status, reason }.
+ */
+export function parseEnrollResult(raw: unknown, leadId: string): EnrollResult {
+  const result = (raw ?? {}) as Record<string, unknown>;
+  const idOf = (x: unknown) => (typeof x === "string" ? x : ((x as Record<string, unknown> | null)?.leadId as string | undefined));
+  const reasonOf = (x: unknown) => String((x as Record<string, unknown> | null)?.reason ?? "skipped");
+  if (Array.isArray(result.skipped)) {
+    const hit = result.skipped.find((x) => idOf(x) === leadId);
+    if (hit !== undefined) return { accepted: false, reason: reasonOf(hit) };
+  }
+  if (Array.isArray(result.accepted) && result.accepted.some((x) => idOf(x) === leadId)) return { accepted: true };
+  const rows = ["results", "enrollments", "items"].map((k) => result[k]).find(Array.isArray) as unknown[] | undefined;
+  const row = (rows?.find((r) => idOf(r) === leadId) ?? rows?.[0]) as Record<string, unknown> | undefined;
+  if (row) {
+    const status = String(row.status ?? row.result ?? "");
+    if (status === "accepted" || status === "enrolled") return { accepted: true };
+    return { accepted: false, reason: String(row.reason ?? (status || "skipped")) };
+  }
+  return { accepted: true };
+}
+
 export interface NeedleClient {
   searchPeople(input: { keywords: string; company?: string; title?: string; limit?: number }): Promise<PersonHit[]>;
-  composePreview(input: { identity: string; prompt: string }): Promise<string>;
-  sendInvitation(input: { identity: string; note?: string }): Promise<unknown>;
-  sendMessage(input: { identity: string; text: string }): Promise<unknown>;
+  getCampaign(campaignId: string): Promise<NeedleCampaign>;
+  upsertLead(input: { linkedin: string; firstName?: string; lastName?: string; companyName?: string; companyDomain?: string; jobTitle?: string; timezone: string }): Promise<{ leadId: string; created: boolean }>;
+  enrollLead(campaignId: string, leadId: string): Promise<EnrollResult>;
+  getLeadEnrollment(leadId: string, campaignId: string): Promise<string | null>;
+  listLeadEvents(leadId: string): Promise<NeedleLeadEvent[]>;
 }
 
 export function createNeedleClient(options: { apiKey?: string; accountId?: string; fetchImpl?: FetchLike } = {}): NeedleClient {
@@ -135,17 +166,48 @@ export function createNeedleClient(options: { apiKey?: string; accountId?: strin
         .map((r) => toPersonHit(r.data))
         .filter((h): h is PersonHit => h !== null);
     },
-    async composePreview({ identity, prompt }) {
-      const result = (await call("needleComposePreview", { channel: "linkedin", connectedAccountId: accountId, identity, context: ["profile"], prompt })) as { text?: string; raw?: string };
-      const text = result.text ?? result.raw;
-      if (!text) throw new NeedleError("Needle returned no message text");
-      return text;
+    async getCampaign(campaignId) {
+      const result = (await call("needleGetCampaign", { campaignId })) as { campaign?: { id?: string; name?: string; status?: string } };
+      const c = result.campaign;
+      if (!c?.id) throw new NeedleError("Needle returned no campaign");
+      return { id: c.id, name: c.name ?? "", status: c.status ?? "unknown" };
     },
-    async sendInvitation({ identity, note }) {
-      return call("needleSendLinkedinInvitation", { connectedAccountId: accountId, identity, ...(note ? { note: note.slice(0, 300) } : {}) });
+    async upsertLead({ linkedin, timezone, ...fields }) {
+      const clean = Object.fromEntries(Object.entries(fields).filter(([, v]) => typeof v === "string" && v.trim()).map(([k, v]) => [k, (v as string).slice(0, 256)]));
+      const result = (await call("needleUpsertLead", { identities: { linkedin }, timezone, ...clean })) as {
+        lead?: { id?: string };
+        leadId?: string;
+        id?: string;
+        status?: string;
+        result?: string;
+        created?: boolean;
+      };
+      const leadId = result.lead?.id ?? result.leadId ?? result.id;
+      if (!leadId) throw new NeedleError("Needle returned no lead id");
+      const created = result.created ?? (result.status ?? result.result) === "created";
+      return { leadId, created };
     },
-    async sendMessage({ identity, text }) {
-      return call("needleSendLinkedinMessage", { connectedAccountId: accountId, identity, text });
+    async enrollLead(campaignId, leadId) {
+      return parseEnrollResult(await call("needleEnrollCampaignLeads", { campaignId, leadIds: [leadId] }), leadId);
+    },
+    async getLeadEnrollment(leadId, campaignId) {
+      const result = (await call("needleGetLead", { leadId })) as { lead?: { enrollments?: Array<Record<string, unknown>> } };
+      const enrollment = (result.lead?.enrollments ?? []).find((e) => e.campaignId === campaignId) ?? result.lead?.enrollments?.[0];
+      return enrollment ? String(enrollment.status ?? enrollment.state ?? "enrolled") : null;
+    },
+    async listLeadEvents(leadId) {
+      const result = (await call("needleListLeadEvents", { leadId, limit: 100 })) as { events?: Array<Record<string, unknown>> };
+      return (result.events ?? []).map((e) => {
+        const data = (e.data ?? {}) as { text?: unknown };
+        return {
+          id: String(e.id ?? ""),
+          type: String(e.type ?? ""),
+          label: String(e.label ?? e.type ?? ""),
+          at: String(e.occurredAt ?? ""),
+          ...(typeof e.campaignName === "string" ? { campaignName: e.campaignName } : {}),
+          ...(typeof data.text === "string" && data.text ? { text: data.text } : {}),
+        };
+      });
     },
   };
 }

@@ -1,5 +1,5 @@
 /**
- * Read-only check of the outreach setup: lists the Needle LinkedIn accounts and the ElevenLabs agents
+ * Read-only check of the outreach setup: lists the Needle LinkedIn accounts and campaigns and the ElevenLabs agents
  * and phone numbers, and says which configured ids match. Sends no message and places no call.
  *   npm run outreach:check
  */
@@ -50,6 +50,24 @@ async function needle() {
     bad(configured ? "NEEDLE_CONNECTED_ACCOUNT_ID does not match a usable account" : "NEEDLE_CONNECTED_ACCOUNT_ID missing");
     const usable = accounts.filter((a) => a.canUse);
     if (usable.length === 1) console.log(`    suggestion: NEEDLE_CONNECTED_ACCOUNT_ID=${usable[0].id}`);
+    problems++;
+  }
+
+  const campaignsBody = await fetch(NEEDLE_MCP_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "needleListCampaigns", arguments: { limit: 50 } } }),
+    signal: AbortSignal.timeout(30_000),
+  }).then((r) => r.text());
+  const campaigns = ((parseMcpBody(campaignsBody) as { campaigns?: Array<{ id?: string; name?: string; status?: string }> }).campaigns ?? []).filter((c) => c.status !== "archived");
+  for (const c of campaigns) console.log(`    campaign ${c.id}: ${c.name} (${c.status})`);
+  const campaign = campaigns.find((c) => c.id === process.env.NEEDLE_CAMPAIGN_ID);
+  if (campaign) {
+    ok(`NEEDLE_CAMPAIGN_ID matches "${campaign.name}"`);
+    if (campaign.status !== "active") console.log(`    note: the campaign is ${campaign.status}; Needle sends nothing until it is active`);
+  } else {
+    bad(process.env.NEEDLE_CAMPAIGN_ID ? "NEEDLE_CAMPAIGN_ID does not match a campaign" : "NEEDLE_CAMPAIGN_ID missing");
+    if (campaigns.length === 1) console.log(`    suggestion: NEEDLE_CAMPAIGN_ID=${campaigns[0].id}`);
     problems++;
   }
 }

@@ -1,9 +1,10 @@
 import type { OutreachEvent } from "@/lib/outreach/store";
 import { LinkedinIcon, PhoneIcon } from "./icons";
-import { SyncCallButton } from "./SyncCallButton";
+import { SyncButton } from "./SyncButton";
 
 const STATUS: Record<OutreachEvent["status"], { label: string; cls: string }> = {
   sent: { label: "Sent", cls: "bg-brand-tint text-brand-text" },
+  enrolled: { label: "In campaign", cls: "bg-brand-tint text-brand-text" },
   initiated: { label: "Started", cls: "bg-track text-muted" },
   in_progress: { label: "In progress", cls: "bg-track text-muted" },
   done: { label: "Done", cls: "bg-brand-tint text-brand-text" },
@@ -37,7 +38,9 @@ export function OutreachLog({ companyId, events }: { companyId: string; events: 
                 <span className="flex items-center gap-2 font-semibold">
                   {e.type === "linkedin" ? <span className="text-[#0A66C2]"><LinkedinIcon size={16} /></span> : <PhoneIcon size={16} />}
                   {e.type === "linkedin"
-                    ? `${e.linkedin?.action === "invitation" ? "Connection request" : "Message"} to ${e.linkedin?.name}`
+                    ? e.linkedin?.action === "campaign"
+                      ? `${e.linkedin.name} added to the Needle campaign`
+                      : `${e.linkedin?.action === "invitation" ? "Connection request" : "Message"} to ${e.linkedin?.name}`
                     : `AI call to ${e.call?.to}`}
                 </span>
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${STATUS[e.status].cls}`}>{STATUS[e.status].label}</span>
@@ -49,6 +52,29 @@ export function OutreachLog({ companyId, events }: { companyId: string; events: 
                 {e.call?.durationSecs != null ? ` · ${duration(e.call.durationSecs)}` : ""}
               </p>
               {e.linkedin?.text && <blockquote className="mt-2 mb-0 whitespace-pre-line rounded-[10px] bg-panel px-3.5 py-2.5 text-[15px]">{e.linkedin.text}</blockquote>}
+              {e.needle && (
+                <p className="mt-1 mb-0 text-sm text-muted">
+                  {e.needle.campaignName ?? "Campaign"} · campaign {e.needle.campaignStatus ?? "unknown"}
+                  {e.needle.enrollment ? ` · enrollment ${e.needle.enrollment}` : ""}
+                </p>
+              )}
+              {e.needle?.events && e.needle.events.length > 0 && (
+                <ol className="mt-2 mb-0 list-none space-y-2 p-0">
+                  {e.needle.events.map((x) => (
+                    <li key={x.id} className="rounded-[10px] bg-panel px-3.5 py-2.5 text-[15px]">
+                      <span className="block text-[13px] text-muted">
+                        {when(x.at)} · {x.label}
+                      </span>
+                      {x.text && <span className="mt-0.5 block whitespace-pre-line">{x.text}</span>}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {e.needle && e.status !== "failed" && (
+                <div className="mt-1">
+                  <SyncButton url="/api/outreach/linkedin" body={{ op: "sync", companyId, eventId: e.id }} label={e.needle.syncedAt ? `Refresh from Needle (last ${when(e.needle.syncedAt)})` : "Refresh from Needle"} />
+                </div>
+              )}
               {e.call?.summary && <p className="mt-2 mb-0 text-[15px] text-ink-soft">{e.call.summary}</p>}
               {e.call?.transcript && e.call.transcript.length > 0 && (
                 <details className="mt-2">
@@ -65,12 +91,12 @@ export function OutreachLog({ companyId, events }: { companyId: string; events: 
               {e.error && <p className="mt-2 mb-0 text-sm text-amber-text">{e.error}</p>}
               {e.type === "call" && e.call?.conversationId && e.status !== "done" && e.status !== "failed" && (
                 <div className="mt-1">
-                  <SyncCallButton companyId={companyId} eventId={e.id} label="Get status and transcript" />
+                  <SyncButton url="/api/outreach/call" body={{ op: "sync", companyId, eventId: e.id }} label="Get status and transcript" />
                 </div>
               )}
               {e.type === "call" && e.status === "done" && !e.call?.transcript?.length && e.call?.conversationId && (
                 <div className="mt-1">
-                  <SyncCallButton companyId={companyId} eventId={e.id} label="Load transcript" />
+                  <SyncButton url="/api/outreach/call" body={{ op: "sync", companyId, eventId: e.id }} label="Load transcript" />
                 </div>
               )}
             </li>

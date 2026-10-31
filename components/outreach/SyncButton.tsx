@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { postOutreach } from "./api";
 
-export function SyncCallButton({ companyId, eventId, label }: { companyId: string; eventId: string; label: string }) {
+/** Asks the server to pull fresh data from a provider (call transcript, Needle events), then re-renders the lead. */
+export function SyncButton({ url, body, label }: { url: string; body: Record<string, unknown>; label: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +17,7 @@ export function SyncCallButton({ companyId, eventId, label }: { companyId: strin
         onClick={async () => {
           setBusy(true);
           setError(null);
-          const res = await postOutreach("/api/outreach/call", { op: "sync", companyId, eventId });
+          const res = await postOutreach(url, body);
           setBusy(false);
           if (res.ok) router.refresh();
           else setError(res.message);

@@ -15,16 +15,27 @@ export const outreachEventSchema = z.object({
   id: z.string(),
   type: z.enum(["linkedin", "call"]),
   at: z.string(),
-  status: z.enum(["sent", "initiated", "in_progress", "done", "failed"]),
+  status: z.enum(["sent", "enrolled", "initiated", "in_progress", "done", "failed"]),
   error: z.string().optional(),
   linkedin: z
     .object({
-      action: z.enum(["invitation", "message"]),
+      action: z.enum(["invitation", "message", "campaign"]),
       identity: z.string(),
       name: z.string(),
       headline: z.string().optional(),
       profileUrl: z.string().optional(),
-      text: z.string(),
+      text: z.string().optional(),
+    })
+    .optional(),
+  needle: z
+    .object({
+      leadId: z.string(),
+      campaignId: z.string(),
+      campaignName: z.string().optional(),
+      campaignStatus: z.string().optional(),
+      enrollment: z.string().optional(),
+      events: z.array(z.object({ id: z.string(), type: z.string(), label: z.string(), at: z.string(), text: z.string().optional() })).optional(),
+      syncedAt: z.string().optional(),
     })
     .optional(),
   call: z

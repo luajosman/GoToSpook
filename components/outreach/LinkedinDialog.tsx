@@ -1,11 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { postOutreach } from "./api";
 import { Dialog, INPUT, Notice, PRIMARY, SECONDARY } from "./Dialog";
 
 type Person = { identity: string; name: string; headline: string; location: string; profileUrl: string; degree: string };
+type Campaign = { id: string; name: string; status: string };
+
+const URL = "/api/outreach/linkedin";
 
 export function LinkedinDialog({ open, onClose, companyId, companyName }: { open: boolean; onClose: () => void; companyId: string; companyName: string }) {
   const router = useRouter();
@@ -13,61 +16,68 @@ export function LinkedinDialog({ open, onClose, companyId, companyName }: { open
   const [title, setTitle] = useState("Geschäftsführer");
   const [people, setPeople] = useState<Person[] | null>(null);
   const [person, setPerson] = useState<Person | null>(null);
-  const [action, setAction] = useState<"invitation" | "message">("invitation");
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState<"search" | "draft" | "send" | null>(null);
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [busy, setBusy] = useState<"search" | "enroll" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [done, setDone] = useState(false);
 
-  const url = "/api/outreach/linkedin";
+  useEffect(() => {
+    let alive = true;
+    void postOutreach<Campaign>(URL, { op: "campaign", companyId }).then((res) => {
+      if (!alive) return;
+      if (res.ok) setCampaign(res.data);
+      else setError(res.message);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [companyId]);
 
   async function search(event: FormEvent) {
     event.preventDefault();
     setBusy("search");
     setError(null);
-    const res = await postOutreach<Person[]>(url, { op: "search", companyId, keywords, title });
+    const res = await postOutreach<Person[]>(URL, { op: "search", companyId, keywords, title });
     setBusy(null);
     if (res.ok) setPeople(res.data);
     else setError(res.message);
   }
 
-  async function draft() {
+  async function enroll() {
     if (!person) return;
-    setBusy("draft");
+    setBusy("enroll");
     setError(null);
-    const res = await postOutreach<string>(url, { op: "preview", companyId, identity: person.identity });
-    setBusy(null);
-    if (res.ok) setText(action === "invitation" ? res.data.slice(0, 300) : res.data);
-    else setError(res.message);
-  }
-
-  async function send() {
-    if (!person) return;
-    setBusy("send");
-    setError(null);
-    const res = await postOutreach(url, { op: "send", companyId, person, action, text });
+    const res = await postOutreach(URL, { op: "enroll", companyId, person });
     setBusy(null);
     if (!res.ok) {
       setError(res.message);
       return;
     }
-    setSent(true);
+    setDone(true);
     router.refresh();
   }
 
   function close() {
-    setSent(false);
+    setDone(false);
     setError(null);
     onClose();
   }
 
-  const limit = action === "invitation" ? 300 : 3000;
+  const draft = campaign && campaign.status !== "active";
 
   return (
-    <Dialog open={open} onClose={close} title={`LinkedIn outreach · ${companyName}`}>
-      {sent ? (
+    <Dialog open={open} onClose={close} title={`LinkedIn via Needle · ${companyName}`}>
+      {campaign && (
+        <p className="mt-0 mb-3 text-sm text-muted">
+          Campaign <span className="font-semibold text-ink">{campaign.name}</span> · {campaign.status}
+        </p>
+      )}
+      {done ? (
         <>
-          <Notice tone="ok">Sent to {person?.name}. The message is saved on this lead.</Notice>
+          <Notice tone="ok">
+            {person?.name} is in the Needle campaign. Needle checks the connection, sends the invitation and the messages on its schedule
+            {draft ? " once the campaign is activated in Needle" : ""}. Use “Refresh from Needle” on the lead to see what was sent.
+          </Notice>
           <div className="mt-4 flex justify-end">
             <button type="button" onClick={close} className={SECONDARY}>
               Close
@@ -76,9 +86,9 @@ export function LinkedinDialog({ open, onClose, companyId, companyName }: { open
         </>
       ) : !person ? (
         <>
-          <p className="m-0 text-[15px] text-muted">Find the right person at this company, then write to them from the connected LinkedIn account.</p>
+          <p className="m-0 text-[15px] text-muted">Find the right person at this company. Needle then writes and sends the messages.</p>
           <form onSubmit={search} className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_180px_auto]">
-            <input autoFocus aria-label="Keywords" className={INPUT} value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="Company or name" />
+            <input aria-label="Keywords" className={INPUT} value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="Company or name" />
             <input aria-label="Job title" className={INPUT} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Job title" />
             <button type="submit" disabled={busy !== null || keywords.trim().length < 2} className={PRIMARY}>
               {busy === "search" ? "Searching …" : "Search"}
@@ -96,7 +106,7 @@ export function LinkedinDialog({ open, onClose, companyId, companyName }: { open
                   <a href={p.profileUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold no-underline">
                     Profile
                   </a>
-                  <button type="button" onClick={() => { setPerson(p); setAction(p.degree === "1" || p.degree === "DISTANCE_1" ? "message" : "invitation"); setText(""); }} className={SECONDARY}>
+                  <button type="button" onClick={() => setPerson(p)} className={SECONDARY}>
                     Choose
                   </button>
                 </li>
@@ -115,35 +125,17 @@ export function LinkedinDialog({ open, onClose, companyId, companyName }: { open
               Change
             </button>
           </div>
-          <fieldset className="mt-4 flex flex-wrap gap-4 border-0 p-0">
-            <legend className="sr-only">What to send</legend>
-            <label className="flex cursor-pointer items-center gap-2 text-[15px]">
-              <input type="radio" name="action" checked={action === "invitation"} onChange={() => setAction("invitation")} className="h-4 w-4 accent-brand" />
-              Connection request with note
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-[15px]">
-              <input type="radio" name="action" checked={action === "message"} onChange={() => setAction("message")} className="h-4 w-4 accent-brand" />
-              Message (only to existing connections)
-            </label>
-          </fieldset>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <label htmlFor="li-text" className="text-[15px] font-semibold">
-              Message
-            </label>
-            <button type="button" onClick={draft} disabled={busy !== null} className="text-sm font-semibold text-ink disabled:text-faint">
-              {busy === "draft" ? "Drafting …" : "Draft with AI from their profile"}
-            </button>
-          </div>
-          <textarea id="li-text" value={text} onChange={(e) => setText(e.target.value)} rows={6} maxLength={limit} className={`mt-1.5 py-2.5 ${INPUT}`} placeholder="Guten Tag …" />
-          <p className="mt-1 mb-0 text-right text-[13px] text-muted tabular-nums">
-            {text.length} / {limit}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+          <Notice tone="info">
+            Needle adds {person.name.split(" ")[0]} as a lead and runs the campaign: it checks the connection, sends an invitation, writes the
+            first message with AI and follows up once.
+            {draft ? " The campaign is not active yet, so nothing is sent until you activate it in Needle." : ""}
+          </Notice>
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
             <button type="button" onClick={close} className={SECONDARY}>
               Cancel
             </button>
-            <button type="button" onClick={send} disabled={busy !== null || text.trim().length === 0} className={PRIMARY}>
-              {busy === "send" ? "Sending …" : `Send to ${person.name.split(" ")[0]}`}
+            <button type="button" onClick={enroll} disabled={busy !== null || !campaign} className={PRIMARY}>
+              {busy === "enroll" ? "Adding …" : "Add to the campaign"}
             </button>
           </div>
         </>
