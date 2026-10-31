@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 
-export type Current = "pipeline" | "leads" | "inbound" | "customers" | "pricing";
+export type Current = "pipeline" | "leads" | "inbound" | "customers" | "pricing" | "how";
 
 const NAV: Array<{ key: Current; label: string; href: "/pipeline" | "/leads" | "/inbound" | "/customers" | "/pricing" }> = [
   { key: "pipeline", label: "Pipeline", href: "/pipeline" },
@@ -41,6 +41,14 @@ export function AppHeader({ current }: { current?: Current }) {
             )}
           </nav>
         </div>
+        <div className="flex items-center gap-3">
+        <Link
+          href="/how-it-works"
+          aria-current={current === "how" ? "page" : undefined}
+          className={`inline-flex min-h-11 items-center px-2 text-[15px] no-underline ${current === "how" ? "font-semibold text-ink hover:text-ink" : "font-medium text-muted hover:text-ink"}`}
+        >
+          How it works
+        </Link>
         <span
           aria-hidden="true"
           className="flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-white text-muted"
@@ -50,6 +58,7 @@ export function AppHeader({ current }: { current?: Current }) {
             <path d="M4 21a8 8 0 0 1 16 0" />
           </svg>
         </span>
+        </div>
       </div>
     </header>
   );
