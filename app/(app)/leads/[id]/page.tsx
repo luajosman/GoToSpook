@@ -178,7 +178,7 @@ async function LeadDetail({ run, params }: { run: LoadedRun; params: Params }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <OutreachButtons companyId={company.id} companyName={company.name} phone={company.phone} />
+          <OutreachButtons companyId={company.id} companyName={company.name} phone={company.phone} defaultCallTo={config.outreach.defaultCallTo || undefined} />
           <Link
             href="/leads"
             className="inline-flex min-h-12 items-center rounded-[10px] border border-line-strong bg-white px-[18px] text-base font-medium text-ink no-underline hover:text-ink"

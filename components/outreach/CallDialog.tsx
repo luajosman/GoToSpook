@@ -5,9 +5,24 @@ import { useState, type FormEvent } from "react";
 import { postOutreach } from "./api";
 import { Dialog, INPUT, Notice, PRIMARY, SECONDARY } from "./Dialog";
 
-export function CallDialog({ open, onClose, companyId, companyName, phone }: { open: boolean; onClose: () => void; companyId: string; companyName: string; phone?: string }) {
+export function CallDialog({
+  open,
+  onClose,
+  companyId,
+  companyName,
+  phone,
+  defaultCallTo,
+}: {
+  open: boolean;
+  onClose: () => void;
+  companyId: string;
+  companyName: string;
+  phone?: string;
+  defaultCallTo?: string;
+}) {
   const router = useRouter();
-  const [to, setTo] = useState(phone ?? "");
+  const usesDefault = !phone && Boolean(defaultCallTo);
+  const [to, setTo] = useState(phone || defaultCallTo || "");
   const [contactName, setContactName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +69,9 @@ export function CallDialog({ open, onClose, companyId, companyName, phone }: { o
             Phone number
           </label>
           <input autoFocus id="call-to" type="tel" inputMode="tel" className={`mt-1.5 ${INPUT}`} value={to} onChange={(e) => setTo(e.target.value)} placeholder="+49 30 1234567" />
+          {usesDefault && to === defaultCallTo && (
+            <p className="mt-1.5 mb-0 text-sm text-muted">No number known for this company, so your default number is filled in.</p>
+          )}
           <label htmlFor="call-contact" className="mt-3 block text-[15px] font-semibold">
             Ask for <span className="font-normal text-muted">(optional)</span>
           </label>

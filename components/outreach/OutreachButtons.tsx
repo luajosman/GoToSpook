@@ -8,7 +8,7 @@ import { LinkedinDialog } from "./LinkedinDialog";
 const ICON_BTN =
   "inline-flex h-12 w-12 items-center justify-center rounded-[10px] border border-line-strong bg-white text-ink hover:bg-track";
 
-export function OutreachButtons({ companyId, companyName, phone }: { companyId: string; companyName: string; phone?: string }) {
+export function OutreachButtons({ companyId, companyName, phone, defaultCallTo }: { companyId: string; companyName: string; phone?: string; defaultCallTo?: string }) {
   const [open, setOpen] = useState<"linkedin" | "call" | null>(null);
   return (
     <>
@@ -19,7 +19,7 @@ export function OutreachButtons({ companyId, companyName, phone }: { companyId: 
         <PhoneIcon size={20} />
       </button>
       {open === "linkedin" && <LinkedinDialog open onClose={() => setOpen(null)} companyId={companyId} companyName={companyName} />}
-      {open === "call" && <CallDialog open onClose={() => setOpen(null)} companyId={companyId} companyName={companyName} phone={phone} />}
+      {open === "call" && <CallDialog open onClose={() => setOpen(null)} companyId={companyId} companyName={companyName} phone={phone} defaultCallTo={defaultCallTo} />}
     </>
   );
 }

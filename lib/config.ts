@@ -89,6 +89,8 @@ export const config = {
   outreach: {
     /** The company the outreach is for, as named in messages and calls. */
     sellerName: process.env.OUTREACH_SELLER_NAME ?? "Meisterpfad",
+    /** Number the call dialog fills in when a company has none (e.g. your own phone for a demo). Kept in .env.local. */
+    defaultCallTo: process.env.OUTREACH_DEFAULT_CALL_TO ?? "",
   },
 
   fax: {

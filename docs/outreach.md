@@ -17,6 +17,7 @@ Both connectors are TypeScript ports of the team's Python scripts (`needle/linke
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | only for `calls:import-number`; use a fresh token |
 | `ELEVENLABS_VOICE_ID` | optional, default Sarah |
 | `OUTREACH_SELLER_NAME` | optional, who the outreach is for (default Meisterpfad) |
+| `OUTREACH_DEFAULT_CALL_TO` | optional, the number the call dialog fills in when a company has none, e.g. your own phone for a demo |
 
 Check the setup without sending anything (lists the Needle accounts and the ElevenLabs numbers and agents, and suggests the ids):
 
