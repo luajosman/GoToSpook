@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { CURRENT_PRICING, monthlyPrice, pricingFormulaText } from "../lib/score/formula";
 import { bucketsFor, DEFAULT_STARTER, simulate, toSimulationInput } from "../lib/score/simulate";
-import { sampleRun } from "../lib/sample";
+import { sampleRun } from "./fixtures/sample";
 
 const NOW = new Date(sampleRun.generatedAt);
 const inputs = sampleRun.companies.map(toSimulationInput);

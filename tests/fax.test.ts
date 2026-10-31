@@ -5,7 +5,7 @@ import { MemoryFaxLog } from "../lib/fax/log";
 import { normalizeFaxNumber } from "../lib/fax/number";
 import { offerLetter } from "../lib/fax/offer";
 import { sendOffer } from "../lib/fax/send-offer";
-import { sampleRun } from "../lib/sample";
+import { sampleRun } from "./fixtures/sample";
 
 const WOLFF = "wolff-gebaeudetechnik-10117";
 const findCompany = (id: string) => sampleRun.companies.find((c) => c.id === id);

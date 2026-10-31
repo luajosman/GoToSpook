@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { sampleRun } from "../lib/sample";
+import { sampleRun } from "./fixtures/sample";
 import { scoredRunSchema } from "../lib/schema";
 import type { Motion } from "../lib/types";
 

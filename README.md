@@ -24,7 +24,7 @@ Then open <http://localhost:3000>. The header has Overview, Pipeline, Leads and 
 | `/customers` | Customers who are growing, shown as an empty state until a customer list exists |
 | `/how-it-works` | The three motions, routing rules, data sources and contact rules |
 
-Without a results file the app shows the committed sample (twelve fictional companies from the design mockup, marked "Sample data"). A real run goes to `data/results/scored.json`, which is git-ignored and picked up automatically. The file's contract for whoever writes the pipeline is in `docs/results-format.md`.
+Companies come from Lusha's company search. Without a results file the app is empty and the Overview explains how to start the pipeline; there is no seed data. A run writes `data/results/scored.json` (git-ignored), which the app picks up on the next page load. The file's contract for whoever writes the pipeline is in `docs/results-format.md`.
 
 ## Scripts
 
@@ -34,8 +34,21 @@ Without a results file the app shows the committed sample (twelve fictional comp
 | `npm run lint` | ESLint; run it before every commit |
 | `npm run check` | Unit checks for the formula, threshold, motion rules, sample data and fax flow |
 | `npm run typecheck` | Route types plus `tsc --noEmit` |
-| `npm run pipeline` | Source, enrich and score all companies into `data/` (not built yet) |
+| `npm run pipeline` | One Lusha run: fetch new search pages under the credit cap, score everything, write `data/results/scored.json` |
+| `npm run pipeline:watch` | The same, repeated every `LUSHA_WATCH_MINUTES` (default 60); `-- --every 30 --max-credits 20` to override |
+| `npm run pipeline -- --rescore` | Score what is stored without calling Lusha |
+| `npm run lusha:filters -- locations Berlin` | Look up valid Lusha filter values for `lib/config.ts` |
 | `npm run validate -- <file>` | Check a results file against the schema the app reads (`npx tsx scripts/validate-results.ts --example` prints one) |
+
+## Data pipeline (Lusha)
+
+1. Put `LUSHA_API_KEY` into `.env.local`.
+2. Check the location values once: `npm run lusha:filters -- locations Berlin` and `… Brandenburg`, and adjust `config.lusha.include` in `lib/config.ts` if Lusha spells them differently.
+3. `npm run pipeline` for one run, or `npm run pipeline:watch` to keep it running.
+
+Each run reads the remaining credits and the live price first, spends at most `LUSHA_MAX_CREDITS_PER_RUN` (default 50), continues where the last run stopped, and serves cached pages (`LUSHA_CACHE_DAYS`, default 7) for free. Every company found is kept in `data/raw/lusha/` and the whole list is re-scored on each run; each run is also saved under `data/results/runs/`. Lusha gives total staff; the code splits it into technicians and office seats with the brief's ratio of one office seat per 7 technicians. Companies without a staff count are skipped, never guessed. Endpoints and open questions: `docs/lusha.md`.
+
+The pages read the results file on each request in `npm run dev`. A production build (`npm run build`) prerenders most pages, so rebuild after a run when you deploy.
 
 ## AI features
 

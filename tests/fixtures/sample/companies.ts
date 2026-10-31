@@ -1,11 +1,12 @@
 /**
+ * Test fixtures only: the app never shows this data.
  * Sample companies for the demo: the fictional firms from the design mockup, with the
  * drivers and evidence the mockup shows. Nothing here is a real company, address, person
  * or number; websites use the reserved .example domain.
  */
-import type { ScoreInput } from "../score";
-import { companyId } from "../slug";
-import type { Company, Driver, Evidence, EvidenceSource } from "../types";
+import type { ScoreInput } from "../../../lib/score";
+import { companyId } from "../../../lib/slug";
+import type { Company, Driver, Evidence, EvidenceSource } from "../../../lib/types";
 
 /** The sample run was generated on this date; the welcome rule counts days from it. */
 export const SAMPLE_GENERATED_AT = "2026-10-31T09:00:00+01:00";

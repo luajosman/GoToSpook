@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { LeadsTable, parseMotionFilter } from "@/components/LeadsTable";
 import { MOTION_DOT } from "@/components/MotionPill";
-import { SampleBadge } from "@/components/SampleBadge";
+import { NoDataBadge } from "@/components/NoData";
 import { countByMotion, loadRun, type LoadedRun } from "@/lib/data";
 import { count, dateEn, money } from "@/lib/format";
 import { MOTION_LABELS } from "@/lib/score/motion";
@@ -46,10 +46,10 @@ export default function LeadsPage({ searchParams }: { searchParams: SearchParams
               <h1 className="m-0 text-[28px] leading-[1.2] font-semibold tracking-[-0.02em]">
                 {count(run.companies.length)} leads scored
               </h1>
-              {run.origin === "sample" && <SampleBadge />}
+              <NoDataBadge run={run} />
             </div>
             <p className="mt-2 mb-0 text-base text-muted">
-              {run.niche.label}. Threshold {money(run.threshold)} ACV. Scored {dateEn(run.generatedAt)}.
+              {run.origin === "empty" ? "No companies scored yet. See the Overview to start the pipeline." : `${run.niche.label}. Threshold ${money(run.threshold)} ACV. Scored ${dateEn(run.generatedAt)}.`}
             </p>
           </div>
           <Link

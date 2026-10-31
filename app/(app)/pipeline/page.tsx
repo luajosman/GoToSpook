@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { MOTION_DOT } from "@/components/MotionPill";
-import { SampleBadge } from "@/components/SampleBadge";
+import { NoDataBadge } from "@/components/NoData";
 import { countByMotion, loadRun } from "@/lib/data";
 import { count, money } from "@/lib/format";
 import { MOTION_LABELS } from "@/lib/score/motion";
@@ -32,7 +32,7 @@ export default function PipelinePage() {
       <main className="mx-auto w-full max-w-[1280px] px-8 pt-8 pb-16">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="m-0 text-[28px] leading-[1.2] font-semibold tracking-[-0.02em]">Pipeline</h1>
-          {run.origin === "sample" && <SampleBadge />}
+          <NoDataBadge run={run} />
         </div>
         <p className="mt-2 mb-0 text-base text-muted">Every company in its motion, biggest first. Open one to see why and what to do.</p>
 

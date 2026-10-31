@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AskBox } from "@/components/ai/AskBox";
 import { MOTION_BAR, MOTION_DOT, MotionPill } from "@/components/MotionPill";
-import { SampleBadge } from "@/components/SampleBadge";
+import { NoDataBadge, NoDataNotice } from "@/components/NoData";
 import { countByMotion, loadRun } from "@/lib/data";
 import { count, dateEn, initialsOf, money } from "@/lib/format";
 import { MOTION_LABELS } from "@/lib/score/motion";
@@ -52,11 +52,12 @@ export default function OverviewPage() {
       <main className="mx-auto w-full max-w-[1280px] px-8 pt-8 pb-16">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="m-0 text-[28px] leading-[1.2] font-semibold tracking-[-0.02em]">Overview</h1>
-          {run.origin === "sample" && <SampleBadge />}
+          <NoDataBadge run={run} />
         </div>
         <p className="mt-2 mb-0 text-base text-muted">
-          {run.niche.label}, scored {dateEn(run.generatedAt)}.
+          {run.origin === "empty" ? run.niche.label : `${run.niche.label}, scored ${dateEn(run.generatedAt)}.`}
         </p>
+        <NoDataNotice run={run} />
 
         <div className="mt-7 flex flex-wrap gap-4">
           <Stat label="Companies scored" value={count(total)} note={`from the ${run.niche.source}`} />
@@ -146,7 +147,7 @@ export default function OverviewPage() {
               <dt className="text-muted">Evidence items</dt>
               <dd className="m-0 text-right font-semibold tabular-nums">{count(evidence)}</dd>
               <dt className="text-muted">Data</dt>
-              <dd className="m-0 text-right font-semibold">{run.origin === "sample" ? "Sample" : "Latest run"}</dd>
+              <dd className="m-0 text-right font-semibold">{run.origin === "empty" ? "None yet" : "Lusha"}</dd>
             </dl>
           </section>
         </div>

@@ -1,7 +1,7 @@
 /** The sample run: the sample companies scored with the real formula and motion rules. */
-import { config } from "../config";
-import { scoreCompanies } from "../score";
-import type { ScoredRun } from "../types";
+import { config } from "../../../lib/config";
+import { scoreCompanies } from "../../../lib/score";
+import type { ScoredRun } from "../../../lib/types";
 import { SAMPLE_GENERATED_AT, SAMPLE_INPUTS, SAMPLE_THRESHOLD } from "./companies";
 
 const scored = scoreCompanies(SAMPLE_INPUTS, {

@@ -1,30 +1,41 @@
 /**
- * Reads the scored run the pages show: data/results/scored.json when the pipeline has
- * written one, otherwise the committed sample. Synchronous on purpose, so pages can read
- * it during rendering without a cache directive.
+ * Reads the scored run the pages show: data/results/scored.json, written by the pipeline
+ * (`npm run pipeline`). Without it the app shows an empty run; there is no seed data.
+ * Synchronous on purpose, so pages can read it during rendering without a cache directive.
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { sampleRun } from "./sample";
+import { config } from "./config";
 import { scoredRunSchema } from "./schema";
 import type { Motion, ScoredCompany, ScoredRun } from "./types";
 
 export const RESULTS_PATH = path.join(process.cwd(), "data", "results", "scored.json");
 
-export type LoadedRun = ScoredRun & { origin: "file" | "sample" };
+export type LoadedRun = ScoredRun & { origin: "file" | "empty"; problem?: string };
+
+export function emptyRun(problem?: string): LoadedRun {
+  return {
+    generatedAt: new Date(0).toISOString(),
+    niche: config.niche,
+    threshold: 0,
+    callsPerWeek: config.capacity.reps * config.capacity.callsPerRep,
+    thresholdNote: "set once the first run is scored",
+    companies: [],
+    origin: "empty",
+    ...(problem ? { problem } : {}),
+  };
+}
 
 export function loadRun(): LoadedRun {
-  if (existsSync(RESULTS_PATH)) {
-    try {
-      const parsed = scoredRunSchema.parse(JSON.parse(readFileSync(RESULTS_PATH, "utf8")));
-      return { ...parsed, origin: "file" };
-    } catch (error) {
-      console.warn(
-        `[acv-router] Ignoring ${RESULTS_PATH} and showing the sample: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+  if (!existsSync(RESULTS_PATH)) return emptyRun();
+  try {
+    const parsed = scoredRunSchema.parse(JSON.parse(readFileSync(RESULTS_PATH, "utf8")));
+    return { ...parsed, origin: "file" };
+  } catch (error) {
+    const problem = `data/results/scored.json is not valid: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`;
+    console.warn(`[acv-router] ${problem}`);
+    return emptyRun(problem);
   }
-  return { ...sampleRun, origin: "sample" };
 }
 
 export function findCompany(run: ScoredRun, id: string): ScoredCompany | undefined {

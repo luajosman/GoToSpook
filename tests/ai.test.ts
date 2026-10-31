@@ -8,7 +8,7 @@ import { briefingFor, cachedBriefing, type Briefing } from "../lib/ai/briefing";
 import { AiNotConfiguredError, aiErrorResponse, openAiRunner, type Runner, type StructuredRequest } from "../lib/ai/client";
 import { companyFacts } from "../lib/ai/facts";
 import { welcomeFor } from "../lib/ai/welcome";
-import { sampleRun } from "../lib/sample";
+import { sampleRun } from "./fixtures/sample";
 
 const root = mkdtempSync(path.join(tmpdir(), "acv-ai-"));
 after(() => rmSync(root, { recursive: true, force: true }));

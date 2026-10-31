@@ -153,8 +153,8 @@ export function PricingSimulator({ companies, threshold, generatedAt }: { compan
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-[18px]">
-            {result.buckets.map((b) => (
-              <div key={b.label} className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {result.buckets.map((b, i) => (
+              <div key={`${i}-${b.label}`} className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span className="flex-[0_0_150px] font-semibold tabular-nums">{b.label}</span>
                 <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-1.5">
                   <div className="flex items-center gap-2.5">

@@ -80,7 +80,7 @@ const run: ScoredRun = {
 };
 ```
 
-`lib/sample/index.ts` is a complete example of exactly this, on the sample inputs.
+`lib/pipeline.ts` does exactly this with Lusha data; `tests/fixtures/sample/index.ts` does it on fixture inputs.
 
 ## Rules that still apply
 - Keys only in `.env.local`, read server-side. Cache every external call under `data/cache/<provider>/<key>.json` and check it first.

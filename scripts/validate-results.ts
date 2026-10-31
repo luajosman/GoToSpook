@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { RESULTS_PATH } from "../lib/data";
-import { sampleRun } from "../lib/sample";
+import { sampleRun } from "../tests/fixtures/sample";
 import { scoredRunSchema } from "../lib/schema";
 import type { Motion } from "../lib/types";
 
