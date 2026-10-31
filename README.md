@@ -24,7 +24,7 @@ Then open <http://localhost:3000>. The header has Overview, Pipeline, Leads and 
 | `/customers` | Customers who are growing, shown as an empty state until a customer list exists |
 | `/how-it-works` | The three motions, routing rules, data sources and contact rules |
 
-Companies come from Lusha's company search. Without a results file the app is empty and the Overview explains how to start the pipeline; there is no seed data. A run writes `data/results/scored.json` (git-ignored), which the app picks up on the next page load. The file's contract for whoever writes the pipeline is in `docs/results-format.md`.
+Companies come from the SHK guild directory for Brandenburg, the Needle lead list, guild exports and Lusha's company search (see `docs/sources.md`). Without a results file the app is empty and the Overview explains how to start the pipeline; there is no seed data. A run writes `data/results/scored.json` (git-ignored), which the app picks up on the next page load. The file's contract for whoever writes the pipeline is in `docs/results-format.md`.
 
 ## Scripts
 
@@ -38,9 +38,14 @@ Companies come from Lusha's company search. Without a results file the app is em
 | `npm run pipeline:watch` | The same, repeated every `LUSHA_WATCH_MINUTES` (default 60); `-- --every 30 --max-credits 20` to override |
 | `npm run pipeline -- --rescore` | Score what is stored without calling Lusha |
 | `npm run lusha:filters -- locations Berlin` | Look up valid Lusha filter values for `lib/config.ts` |
+| `npm run calls:setup-agent` | Create the English calling agent on ElevenLabs and print its id |
 | `npm run validate -- <file>` | Check a results file against the schema the app reads (`npx tsx scripts/validate-results.ts --example` prints one) |
 
-## Data pipeline (Lusha)
+## Data pipeline
+
+Sources and how they are merged: `docs/sources.md`. Without a Lusha key the pipeline runs on the other sources.
+
+### Lusha
 
 1. Put `LUSHA_API_KEY` into `.env.local`.
 2. Check the location values once: `npm run lusha:filters -- locations Berlin` and `… Brandenburg`, and adjust `config.lusha.include` in `lib/config.ts` if Lusha spells them differently.
@@ -49,6 +54,10 @@ Companies come from Lusha's company search. Without a results file the app is em
 Each run reads the remaining credits and the live price first, spends at most `LUSHA_MAX_CREDITS_PER_RUN` (default 50), continues where the last run stopped, and serves cached pages (`LUSHA_CACHE_DAYS`, default 7) for free. Every company found is kept in `data/raw/lusha/` and the whole list is re-scored on each run; each run is also saved under `data/results/runs/`. Lusha gives total staff; the code splits it into technicians and office seats with the brief's ratio of one office seat per 7 technicians. Companies without a staff count are skipped, never guessed. Endpoints and open questions: `docs/lusha.md`.
 
 The pages read the results file on each request in `npm run dev`. A production build (`npm run build`) prerenders most pages, so rebuild after a run when you deploy.
+
+## Outreach
+
+Each lead page has a LinkedIn button (find a person at the company, draft with AI, send a connection request or message through Needle) and a phone button (an English AI agent calls through ElevenLabs). Both need a confirm click, and the message or the call transcript is saved on the lead. Setup and the legal points to check first: `docs/outreach.md`.
 
 ## AI features
 
