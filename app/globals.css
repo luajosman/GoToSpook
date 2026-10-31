@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* Design tokens from CLAUDE.md. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+
+  --color-brand: #0f7b57;
+  --color-brand-hover: #0b6447;
+  --color-brand-tint: #eaf6f0;
+  --color-brand-text: #0b5a40;
+  --color-brand-line: #cdebdd;
+
+  --color-amber: #e3a008;
+  --color-amber-tint: #fdf5e1;
+  --color-amber-text: #8a5a00;
+
+  --color-ink: #121826;
+  --color-ink-soft: #3a4250;
+  --color-muted: #5d6676;
+  --color-faint: #a0a7b4;
+
+  --color-line: #e5e8ed;
+  --color-line-soft: #eef0f3;
+  --color-line-strong: #d5dae1;
+
+  --color-panel: #f7f8fa;
+  --color-track: #f3f5f8;
+  --color-automated: #c5ccd6;
+  --color-mark: #8a93a2;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    background: #ffffff;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    margin: 0;
+    background: #ffffff;
+    color: #121826;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  a {
+    color: #0f7b57;
+  }
+  a:hover {
+    color: #0b6447;
+  }
+  :focus-visible {
+    outline: 2px solid #0f7b57;
+    outline-offset: 2px;
+  }
+  button,
+  input {
+    font: inherit;
+  }
 }
