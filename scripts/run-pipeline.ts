@@ -1,5 +1,6 @@
 /**
- * Runs the Lusha pipeline once, or continuously with --watch.
+ * Runs the company pipeline once, or continuously with --watch: Lusha search (when a key is set),
+ * the Needle CSV, guild exports in data/raw/innung/ and the SHK directory Brandenburg/Berlin.
  *   npm run pipeline                    one run
  *   npm run pipeline -- --watch         every LUSHA_WATCH_MINUTES (default 60)
  *   npm run pipeline -- --watch --every 30 --max-credits 20
@@ -35,20 +36,30 @@ async function once(): Promise<boolean> {
     try {
       client = createLushaClient();
     } catch (error) {
-      if (error instanceof LushaNotConfiguredError) {
-        stamp(error.message);
-        return false;
-      }
-      throw error;
+      if (!(error instanceof LushaNotConfiguredError)) throw error;
+      stamp(`${error.message} Continuing with the other sources.`);
     }
   }
   try {
-    const s = await runPipeline({ client, maxCredits, log: stamp });
+    const s = await runPipeline({
+      client,
+      maxCredits,
+      log: stamp,
+      sources: {
+        needleCsv: config.sources.needleCsv,
+        needleAllRegions: config.sources.needleAllRegions,
+        guildFolder: config.sources.guildFolder,
+        brandenburgShk: config.sources.brandenburgShk,
+        scrapeOffline: rescore,
+        scrapeCacheDays: config.sources.scrapeCacheDays,
+      },
+    });
     stamp(
       `Done: ${s.pagesFetched} pages fetched, ${s.pagesFromCache} from cache, ${s.creditsSpent} credits spent` +
         `${s.creditsRemaining !== null ? ` (${s.creditsRemaining} left)` : ""}, ${s.newCompanies} new, ${s.companiesKnown} known` +
         `${s.totalInSearch !== null ? ` of ${s.totalInSearch} in the search` : ""}, ${s.companiesScored} scored, ${s.skipped} without a staff count. Stopped: ${s.stoppedBecause}.`,
     );
+    stamp(`Sources: Lusha ${s.sources.lusha}, Needle ${s.sources.needle}, guild files ${s.sources.guildFolder}, SHK directory ${s.sources.brandenburgShk}.`);
     if (s.resultsPath) stamp(`Wrote ${s.resultsPath}`);
     return true;
   } catch (error) {

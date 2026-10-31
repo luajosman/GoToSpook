@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { MotionPill } from "@/components/MotionPill";
+import { OutreachButtons } from "@/components/outreach/OutreachButtons";
+import { OutreachLog } from "@/components/outreach/OutreachLog";
+import { listEvents } from "@/lib/outreach/store";
 import { BriefingPanel } from "@/components/ai/BriefingPanel";
 import { WelcomePanel } from "@/components/ai/WelcomePanel";
 import { cachedBriefing } from "@/lib/ai/briefing";
@@ -25,6 +28,7 @@ const SOURCE_LABEL: Record<EvidenceSource, string> = {
   register: "Trade register",
   innung: "Guild member list",
   lusha: "Lusha",
+  needle: "Needle lead list",
   jobs: "Job postings",
   manual: "Entered by a rep",
 };
@@ -35,6 +39,7 @@ const SOURCE_ORIGIN: Record<EvidenceSource, string> = {
   register: "Trade register, via the register API",
   innung: "SHK guild member list",
   lusha: "Lusha company data",
+  needle: "Needle lead list",
   jobs: "Job boards",
   manual: "Rep corrections",
 };
@@ -173,6 +178,7 @@ async function LeadDetail({ run, params }: { run: LoadedRun; params: Params }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
+          <OutreachButtons companyId={company.id} companyName={company.name} phone={company.phone} />
           <Link
             href="/leads"
             className="inline-flex min-h-12 items-center rounded-[10px] border border-line-strong bg-white px-[18px] text-base font-medium text-ink no-underline hover:text-ink"
@@ -321,6 +327,7 @@ async function LeadDetail({ run, params }: { run: LoadedRun; params: Params }) {
             </dl>
           </section>
 
+          <OutreachLog companyId={company.id} events={listEvents(company.id)} />
           <BriefingPanel companyId={company.id} initial={cachedBriefing(company)} />
           {company.motion === "welcome" && <WelcomePanel companyId={company.id} initial={cachedWelcome(company)} />}
 
@@ -355,7 +362,7 @@ async function LeadDetail({ run, params }: { run: LoadedRun; params: Params }) {
                 )}
               </dd>
               <dt className="text-muted">Listed in</dt>
-              <dd className="m-0">{company.sources.map((s) => ({ innung: "guild member list", register: "trade register", lusha: "Lusha" })[s]).join(", ")}</dd>
+              <dd className="m-0">{company.sources.map((s) => ({ innung: "guild member list", register: "trade register", lusha: "Lusha", needle: "Needle" })[s]).join(", ")}</dd>
             </dl>
           </section>
         </div>

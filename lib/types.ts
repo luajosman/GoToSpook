@@ -12,6 +12,7 @@ export type EvidenceSource =
   | "register"
   | "innung"
   | "lusha"
+  | "needle"
   | "jobs"
   | "manual";
 
@@ -31,7 +32,7 @@ export type LegalForm =
   | "sole_trader"
   | "unknown";
 
-export type CompanySource = "innung" | "register" | "lusha";
+export type CompanySource = "innung" | "register" | "lusha" | "needle";
 
 export type Company = {
   /** Stable slug from name and zip, also used as the personal-page slug. */
@@ -47,6 +48,10 @@ export type Company = {
   /** ISO date, from the register. */
   registeredAt?: string;
   managingDirectors?: string[];
+  /** LinkedIn company page, when a source has one. */
+  linkedinUrl?: string;
+  /** Guild (Innung) the company is a member of. */
+  guild?: string;
 };
 
 export type Driver = {

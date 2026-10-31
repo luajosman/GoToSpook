@@ -23,3 +23,11 @@ export function companyId(name: string, zip?: string): string {
   const base = slugify(name) || "company";
   return zip ? `${base}-${zip}` : base;
 }
+
+/** Name for matching across sources: no legal form, no punctuation, umlauts transliterated. */
+export function normalizeName(name: string): string {
+  return slugify(name)
+    .split("-")
+    .filter((word) => word !== "und" && word !== "and")
+    .join("");
+}

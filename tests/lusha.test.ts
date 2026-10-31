@@ -150,7 +150,8 @@ describe("pipeline", () => {
     const run = scoredRunSchema.parse(JSON.parse(readFileSync(path.join(root, "results", "scored.json"), "utf8")));
     assert.equal(run.companies.length, 60);
     assert.ok(run.companies.every((c) => c.sources.includes("lusha") && c.motionReason.length > 0));
-    assert.equal(run.threshold, run.companies[59].estimate.acv - (run.companies[59].estimate.acv % 100) + (run.companies[59].estimate.acv % 100 >= 50 ? 100 : 0));
+    const capacity = Math.round(run.companies[59].estimate.acv / 100) * 100;
+    assert.equal(run.threshold, Math.max(6000, capacity), "capacity threshold, but never below the €6,000 minimum");
   });
 
   it("refetches expired pages", async () => {

@@ -11,7 +11,11 @@ import { config } from "./config";
 import { creditsPerResult, lushaCompanySchema, prospectResponseSchema, type LushaClient, type LushaCompany, type ProspectResponse } from "./connectors/lusha";
 import { scoredRunSchema } from "./schema";
 import { scoreCompanies, type ScoreInput } from "./score";
-import { lushaToScoreInput } from "./sources/lusha";
+import { scrapeBrandenburgShk } from "./sources/brandenburg-shk";
+import { readGuildFolder } from "./sources/innung-folder";
+import { lushaToRecord } from "./sources/lusha";
+import { readNeedleCsv } from "./sources/needle-csv";
+import { mergeRecords, toScoreInput, type SourceRecord } from "./sources/record";
 import type { ScoredRun } from "./types";
 
 export type PipelinePaths = { dataRoot: string };
@@ -51,7 +55,21 @@ export type PipelineOptions = {
   maxCredits?: number;
   cacheDays?: number;
   log?: (line: string) => void;
+  /** Other sources besides Lusha. The directory scrape only runs when asked for explicitly. */
+  sources?: {
+    needleCsv?: string | false;
+    needleAllRegions?: boolean;
+    guildFolder?: string | false;
+    brandenburgShk?: boolean;
+    scrapeCacheDays?: number;
+    scrapePauseMs?: number;
+    /** Use cached directory pages only, without requests. */
+    scrapeOffline?: boolean;
+    fetchImpl?: (input: string, init?: RequestInit) => Promise<Response>;
+  };
 };
+
+export type SourceCounts = { lusha: number; needle: number; needleOutsideNiche: number; guildFiles: number; guildFolder: number; brandenburgShk: number; scrapeErrors: string[] };
 
 export type PipelineSummary = {
   pagesFetched: number;
@@ -65,6 +83,7 @@ export type PipelineSummary = {
   totalInSearch: number | null;
   stoppedBecause: "cap" | "credits" | "end_of_results" | "no_client" | "all_pages_fresh";
   resultsPath: string | null;
+  sources: SourceCounts;
 };
 
 export async function runPipeline(options: PipelineOptions): Promise<PipelineSummary> {
@@ -97,6 +116,7 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineSum
     totalInSearch: state.total,
     stoppedBecause: "no_client",
     resultsPath: null,
+    sources: { lusha: 0, needle: 0, needleOutsideNiche: 0, guildFiles: 0, guildFolder: 0, brandenburgShk: 0, scrapeErrors: [] },
   };
 
   const addResults = (response: ProspectResponse, fetchedAt: string) => {
@@ -167,32 +187,79 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineSum
   }
 
   summary.companiesKnown = Object.keys(store).length;
+
+  const records: SourceRecord[] = [];
+  for (const entry of Object.values(store)) {
+    const record = lushaToRecord(entry.company as LushaCompany, entry.fetchedAt);
+    if (record) records.push(record);
+    else summary.skipped += 1;
+  }
+  summary.sources.lusha = records.length;
+
+  const src = options.sources ?? {};
+  const needleFile = src.needleCsv === false ? null : (src.needleCsv ?? path.join(paths.dataRoot, "raw", "needle", "leads.csv"));
+  if (needleFile) {
+    const needle = readNeedleCsv(needleFile, { allRegions: src.needleAllRegions });
+    if (needle) {
+      records.push(...needle.records);
+      summary.sources.needle = needle.records.length;
+      summary.sources.needleOutsideNiche = needle.outsideNiche;
+      log(`Needle CSV: ${needle.records.length} companies in the niche, ${needle.outsideNiche} outside it`);
+    }
+  }
+  const guildDir = src.guildFolder === false ? null : (src.guildFolder ?? path.join(paths.dataRoot, "raw", "innung"));
+  if (guildDir) {
+    const guilds = readGuildFolder(guildDir);
+    records.push(...guilds.records);
+    summary.sources.guildFiles = guilds.files;
+    summary.sources.guildFolder = guilds.records.length;
+    if (guilds.files) log(`Guild exports: ${guilds.records.length} companies from ${guilds.files} file(s)`);
+  }
+  if (src.brandenburgShk) {
+    const scraped = await scrapeBrandenburgShk({
+      cacheRoot,
+      now: now(),
+      cacheDays: src.scrapeCacheDays ?? 7,
+      pauseMs: src.scrapePauseMs,
+      offline: src.scrapeOffline,
+      fetchImpl: src.fetchImpl,
+      log,
+    });
+    records.push(...scraped.records);
+    summary.sources.brandenburgShk = scraped.records.length;
+    summary.sources.scrapeErrors = scraped.errors;
+    log(`SHK directory Brandenburg/Berlin: ${scraped.records.length} companies (${scraped.fetched} guild pages fetched, ${scraped.fromCache} cached)`);
+    for (const error of scraped.errors) log(`Directory error: ${error}`);
+  }
+
+  const merged = mergeRecords(records);
   const inputs: ScoreInput[] = [];
   const ids = new Set<string>();
-  for (const [lushaId, entry] of Object.entries(store)) {
-    const input = lushaToScoreInput(entry.company, entry.fetchedAt);
-    if (!input) {
-      summary.skipped += 1;
-      continue;
-    }
-    if (ids.has(input.company.id)) input.company.id = `${input.company.id}-${lushaId.slice(-6)}`;
-    ids.add(input.company.id);
+  for (const company of merged) {
+    const input = toScoreInput(company);
+    let id = input.company.id;
+    for (let n = 2; ids.has(id); n++) id = `${input.company.id}-${n}`;
+    input.company.id = id;
+    ids.add(id);
     inputs.push(input);
   }
 
   if (inputs.length === 0) {
-    log("No companies with a staff count yet, so nothing was scored.");
+    log("No companies from any source yet, so nothing was scored.");
     return summary;
   }
 
   const generatedAt = now();
-  const scored = scoreCompanies(inputs, { now: generatedAt });
+  const scored = scoreCompanies(inputs, { now: generatedAt, minThreshold: config.capacity.minThreshold });
   const run: ScoredRun = scoredRunSchema.parse({
     generatedAt: generatedAt.toISOString(),
     niche: config.niche,
     threshold: scored.threshold,
     callsPerWeek: scored.callsPerWeek,
-    thresholdNote: `set to fit ${scored.callsPerWeek} calls a week`,
+    thresholdNote:
+      scored.threshold === config.capacity.minThreshold
+        ? `the minimum for a rep's time (capacity of ${scored.callsPerWeek} calls a week is not the limit)`
+        : `set to fit ${scored.callsPerWeek} calls a week`,
     companies: scored.companies,
   });
   const resultsPath = path.join(paths.dataRoot, "results", "scored.json");

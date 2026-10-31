@@ -89,3 +89,32 @@ export function lushaToScoreInput(company: LushaCompany, fetchedAt: string): Sco
   };
   return { company: record, technicians, officeSeats };
 }
+
+/** The same company as a merge record (see lib/sources/record.ts). */
+export function lushaToRecord(company: LushaCompany, fetchedAt: string): import("./record").SourceRecord | null {
+  const name = company.name?.trim();
+  if (!name) return null;
+  const staff = staffCount(company) ?? undefined;
+  const industry = industryText(company);
+  const city = company.location?.city ?? company.location?.state ?? undefined;
+  return {
+    source: "lusha",
+    name,
+    legalForm: legalFormFromName(name),
+    lushaId: company.id,
+    address: city ? { city } : {},
+    website: websiteOf(company.domain),
+    linkedinUrl: company.socialLinks?.linkedin ?? undefined,
+    staff,
+    evidence: staff
+      ? [
+          {
+            source: "lusha",
+            ...(company.socialLinks?.linkedin ? { url: company.socialLinks.linkedin } : {}),
+            finding: `Lusha lists ${staff.exact ? `${staff.value} employees` : `${staff.low}–${staff.high} employees`}${industry ? `, industry ${industry}` : ""}; split into technicians and office staff at one office seat per 7 technicians`,
+            fetchedAt,
+          },
+        ]
+      : [],
+  };
+}

@@ -6,7 +6,7 @@ export const motionSchema = z.enum(["high_touch", "automated", "welcome", "check
 export const confidenceSchema = z.enum(["high", "medium", "low"]);
 
 export const evidenceSchema = z.object({
-  source: z.enum(["website", "impressum", "register", "innung", "lusha", "jobs", "manual"]),
+  source: z.enum(["website", "impressum", "register", "innung", "lusha", "needle", "jobs", "manual"]),
   url: z.string().optional(),
   finding: z.string().min(1),
   fetchedAt: z.string().min(1),
@@ -23,10 +23,12 @@ export const companySchema = z.object({
   }),
   phone: z.string().optional(),
   website: z.string().optional(),
-  sources: z.array(z.enum(["innung", "register", "lusha"])),
+  sources: z.array(z.enum(["innung", "register", "lusha", "needle"])),
   registerId: z.string().optional(),
   registeredAt: z.string().optional(),
   managingDirectors: z.array(z.string()).optional(),
+  linkedinUrl: z.string().optional(),
+  guild: z.string().optional(),
 });
 
 export const driverSchema = z.object({

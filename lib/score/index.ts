@@ -19,6 +19,8 @@ export type ScoreOptions = {
   /** Fixed threshold instead of the one computed from capacity (e.g. for a partial list). */
   threshold?: number;
   calls?: number;
+  /** Lower bound for the capacity threshold (ignored when a fixed threshold is given). */
+  minThreshold?: number;
 };
 
 export type ScoreResult = {
@@ -34,7 +36,7 @@ export function scoreCompanies(inputs: readonly ScoreInput[], options: ScoreOpti
     estimate: estimateFromDrivers(input.technicians, input.officeSeats),
   }));
   const threshold =
-    options.threshold ?? thresholdFor(estimated.map((e) => e.estimate.acv), calls);
+    options.threshold ?? Math.max(options.minThreshold ?? 0, thresholdFor(estimated.map((e) => e.estimate.acv), calls));
 
   const companies: ScoredCompany[] = estimated
     .map(({ company, estimate }) => ({

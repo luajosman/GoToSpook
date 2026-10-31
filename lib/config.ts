@@ -14,7 +14,7 @@ export const config = {
     id: "hvac-berlin-brandenburg",
     label: "HVAC contractors in Berlin and Brandenburg",
     /** Where the company list came from, as shown in breadcrumbs. */
-    source: "Lusha company search",
+    source: "SHK guild lists, Needle and Lusha",
   },
 
   /** Lusha company search: what to look for and how much to spend per run (see docs/lusha.md). */
@@ -37,6 +37,18 @@ export const config = {
     watchMinutes: envNumber("LUSHA_WATCH_MINUTES", 60),
   },
 
+  /** The other company sources, read on every pipeline run. */
+  sources: {
+    /** Needle lead list export; only rows in Berlin and Brandenburg unless NEEDLE_ALL_REGIONS=1. */
+    needleCsv: process.env.NEEDLE_CSV ?? "data/raw/needle/leads.csv",
+    needleAllRegions: process.env.NEEDLE_ALL_REGIONS === "1",
+    /** Folder of guild member exports (CSV). */
+    guildFolder: process.env.GUILD_FOLDER ?? "data/raw/innung",
+    /** Scrape the Fachverband SHK Brandenburg company search (one request per guild, cached). */
+    brandenburgShk: process.env.SCRAPE_BRANDENBURG_SHK !== "0",
+    scrapeCacheDays: envNumber("SCRAPE_CACHE_DAYS", 7),
+  },
+
   /** The example customer's pricing, € per month. */
   pricing: {
     basePerMonth: 200,
@@ -53,6 +65,8 @@ export const config = {
     callsPerRep: 30,
     /** The threshold is rounded to this step, in €. */
     thresholdRounding: 100,
+    /** The threshold never drops below this, in € ACV: a rep's time goes to accounts worth at least this much. */
+    minThreshold: envNumber("MIN_THRESHOLD", 6000),
     /** First names of the reps, for display only. */
     repNames: ["Lena", "Tom"],
   },
@@ -69,6 +83,12 @@ export const config = {
     lushaMaxAccounts: envNumber("LUSHA_MAX_ACCOUNTS", 20),
     lushaCredits: 150,
     faxes: 100,
+  },
+
+  /** LinkedIn messages (Needle) and AI calls (ElevenLabs) from the lead page. */
+  outreach: {
+    /** The company the outreach is for, as named in messages and calls. */
+    sellerName: process.env.OUTREACH_SELLER_NAME ?? "Meisterpfad",
   },
 
   fax: {
